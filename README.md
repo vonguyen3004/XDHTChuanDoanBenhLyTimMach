@@ -4,6 +4,8 @@ Dự án là một web‑app dùng Flask phía sau (backend) và HTML/JS phía t
 
 Người dùng có thể upload file CSV chứa dãy mẫu ECG, xem danh sách/chi tiết, lọc theo thời gian, in hoặc xuất CSV, và xem đồ thị nhịp tim/chẩn đoán. Ứng dụng chạy trên localhost, có thể mở rộng để triển khai thực tế.
 
+---
+
 📋 MỤC ĐÍCH
 
 - Giúp lưu trữ, quản lý và xem lại bản ghi ECG một cách trực quan.
@@ -83,4 +85,44 @@ Người dùng có thể upload file CSV chứa dãy mẫu ECG, xem danh sách/c
 └── 📂 frontend/                     # Giao diện tĩnh độc lập
     ├── index.html
     └── script.js
+```
+---
+Mỗi phần chịu trách nhiệm rõ ràng:
+- `ml/`: xử lý dữ liệu và huấn luyện mô hình.
+- `backend/`: phục vụ nội dung web và API, kết nối MongoDB.
+- `frontend/`: nếu cần xây dựng giao diện tĩnh tách biệt.
+
+---
+
+🛠️ CÔNG NGHỆ SỬ DỤNG
+
+- Ngôn ngữ: Python 3.11 (Flask, pandas, numpy, sklearn, pymongo).
+- Framework web: Flask + Jinja2 templates.
+- Cơ sở dữ liệu: MongoDB (pymongo).
+- UI/JS: Bootstrap 5, AdminLTE theme, Chart.js, FontAwesome.
+- ML: scikit-learn (RandomForestClassifier, 50 estimators), joblib lưu mô hình.
+- Dữ liệu: tập MIT‑BIH (187 mẫu + nhãn) hoặc dữ liệu tổng hợp.
+- Khác: venv, pandas, matplotlib (nếu cần).
+
+---
+
+🧠 MÔ HÌNH VÀ DỮ LIỆU
+
+- Loại mô hình: Random Forest classifier (số cây 50). Mục tiêu phân loại 5 nhãn ECG cơ bản (bình thường, LBBB, RBBB, PVC, PAC).
+- Dữ liệu đầu vào: CSV, mỗi hàng là vector tín hiệu ECG; cột cuối cùng chứa mã lớp (0‑4). Dữ liệu MIT‑BIH được cung cấp trong `ml/ECG_Diagnosis_System`.
+- Chuẩn hoá: giá trị được chuẩn về trung bình 0, độ lệch chuẩn 1 trước khi đưa vào mô hình.
+- Kết quả huấn luyện: độ chính xác trên tập kiểm tra (vd. chạy thử với dữ liệu giả) đạt khoảng 98‑99%. Khi dùng bộ MIT‑BIH thật có thể đạt khoảng 95‑99% tuỳ kích thước và tiền xử lý.
+- Mô hình sau huấn luyện được lưu tại `backend/model.joblib` và load khi server khởi động.
+
+---
+
+🚀 TRIỂN KHAI VÀ MỞ RỘNG
+
+- Có thể đóng gói bằng Docker, thêm xác thực người dùng, hoặc triển khai lên máy chủ thật.
+- Mô hình dễ thay bằng bất kỳ bộ huấn luyện khác (XGBoost, NN) miễn sao xuất ra file joblib.
+- Thêm API cho mobile/app và bảo mật CORS/SSL.
+
+
+
+
 
