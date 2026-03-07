@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- page header replaced by card header below -->
+{% set hr = ecg.get('heart_rate') %}
+{% set hr_status = 'normal' %}
+{% if hr is not none %}
+  {% if hr < 60 or hr > 100 %}
+    {% set hr_status = 'warning' %}
+  {% endif %}
+  {% if hr < 50 or hr > 120 %}
+    {% set hr_status = 'danger' %}
+  {% endif %}
+{% endif %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="mt-2">
+      {% for category, msg in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ msg }}
+          <button type="button" class="close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+<div class="card shadow-lg mb-4">
+  <div class="card-header">
+      <h2 class="mb-0" style="color: var(--color-primary);">Chi tiết ECG {{ ecg['_id'] }}</h2>
+  </div>
+  <div class="card-body ecg-card">
+    <div class="mb-3" style="height:500px; overflow-x:auto;">
+      <canvas id="ecgChart" style="min-width:800px;"></canvas>
+    </div>
+    <script src="/static/js/ecg.js"></script>
+    <script>loadECG("{{ ecg['_id'] }}");</script>
+    <div class="mb-3 bpm-display {{ hr_status }}{% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %} abnormal{% endif %}">
+      <i data-feather="heart" class="icon-lg"></i>
+      {% if ecg.get('heart_rate') is not none %}
+        {{ "%0.1f"|format(ecg.heart_rate) }} BPM
+      {% else %}
+        -- BPM
+      {% endif %}
+    </div>
+    <div class="card diagnosis-card {% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %}abnormal{% endif %} mb-3">
+      <span class="badge status-{{ hr_status }} ms-2">{{ hr_status.capitalize() }}</span>
+      <div class="card-body">
+        <strong class="text-uppercase">
+          <i data-feather="{% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %}alert-triangle{% else %}check-circle{% endif %}" class="{% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %}text-danger{% else %}text-success{% endif %}"></i>
+          Kết quả chẩn đoán:
+        </strong>
+        {% if ecg.get('prediction_label') %}
+          {{ ecg.prediction_label }} (Mã {{ ecg.prediction }})
+          {% if ecg.get('prediction_desc') %}
+            <div class="mt-1 small text-muted">{{ ecg.prediction_desc.replace('. ', '.<br>')|safe }}</div>
+          {% endif %}
+        {% elif ecg.get('prediction') is not none %}
+          {{ ecg.prediction }}
+        {% else %}
+          Chưa có
+        {% endif %}
+      </div>
+    </div>
+    <form id="analyzeForm" method="post" action="/analyze/{{ ecg['_id'] }}" class="d-inline">
+        <button class="btn btn-primary"><i data-feather="rotate-cw" class="icon-lg"></i> Phân tích lại</button>
+    </form>
+    <a class="btn btn-secondary" href="/export/{{ ecg['_id'] }}"><i data-feather="share"></i> Xuất PDF</a>
+  </div>
+</div>
+{% endblock %}

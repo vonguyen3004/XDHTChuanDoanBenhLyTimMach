@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 style="color: var(--color-primary);">DASHBOARD TỔNG QUAN</h1>
+<div class="row">
+  <div class="col-md-3 mb-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div>
+          <h6 class="text-muted"><i data-feather="file-text"></i> Tổng bản ghi</h6>
+          <h2 class="mb-0">{{ count }}</h2>
+        </div>
+        <i class="card-icon" data-feather="database"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div>
+          <h6 class="text-muted"><i data-feather="upload"></i> Upload hôm nay</h6>
+          <h2 class="mb-0">{{ today_uploads if today_uploads is defined else 0 }}</h2>
+        </div>
+        <i class="card-icon" data-feather="upload-cloud"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div>
+          <h6 class="text-muted"><i data-feather="heart"></i> Nhịp tim trung bình</h6>
+          <h2 class="mb-0">{{ avg_hr|round(1) }} BPM</h2>
+        </div>
+        <i class="card-icon" data-feather="heart"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div>
+          <h6 class="text-muted"><i data-feather="cpu"></i> Trạng thái AI</h6>
+          <h2 class="mb-0">{{ ai_status if ai_status is defined else 'Sẵn sàng' }}</h2>
+        </div>
+        <i class="card-icon" data-feather="cpu"></i>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-12 mb-3">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="text-muted">Biểu đồ upload theo ngày</h6>
+        <div style="height:300px;"><canvas id="uploadChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- embed data attributes to avoid js lint errors -->
+<div id="uploadData" data-labels='{{ chart_labels|tojson }}' data-values='{{ chart_values|tojson }}' style="display:none;"></div>
+<script>
+// dummy data for chart - replace with real counts via API when available
+const ctx = document.getElementById('uploadChart').getContext('2d');
+const container = document.getElementById('uploadData');
+const labels = JSON.parse(container.dataset.labels);
+const values = JSON.parse(container.dataset.values);
+const darkTheme = true; // always dark in this theme
+// helper to convert hex color to rgba with alpha
+function hex2rgba(hex, a){
+    hex = hex.trim().replace('#','');
+    if(hex.length===3) hex = hex.split('').map(h=>h+h).join('');
+    const r=parseInt(hex.substr(0,2),16);
+    const g=parseInt(hex.substr(2,2),16);
+    const b=parseInt(hex.substr(4,2),16);
+    return `rgba(${r},${g},${b},${a})`;
+}
+
+// create gradient for line using current accent color
+const accent = getComputedStyle(document.body).getPropertyValue('--color-primary');
+const gradient = ctx.createLinearGradient(0,0,0,300);
+gradient.addColorStop(0, hex2rgba(accent,0.6));
+gradient.addColorStop(1, hex2rgba(accent,0.2));
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{ label: 'Upload', data: values, borderColor: getComputedStyle(document.body).getPropertyValue('--color-primary'), backgroundColor: gradient, fill:true, tension:0.3, borderWidth:2 }]
+    },
+    options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+            legend:{labels:{color: getComputedStyle(document.body).getPropertyValue('--color-text')} },
+            tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleFont:{size:14},bodyFont:{size:12},cornerRadius:4,caretSize:6},
+            zoom:{pan:{enabled:true,mode:'x'},zoom:{wheel:{enabled:true},mode:'x'}}
+        },
+        scales:{
+            x:{grid:{color: 'rgba(255,255,255,0.05)'}, ticks:{color: getComputedStyle(document.body).getPropertyValue('--color-text')}},
+            y:{beginAtZero:true,grid:{color: 'rgba(255,255,255,0.05)'}, ticks:{color: getComputedStyle(document.body).getPropertyValue('--color-text')}}
+        }
+    }
+});
+</script>
+{% endblock %}

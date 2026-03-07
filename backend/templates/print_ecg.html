@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  /* dark ICU monitor theme overrides for print page */
+  body { background: var(--color-bg); color: var(--color-text); }
+  .container { padding-top: 1rem; }
+  /* Limit chart width and center it so it doesn't stretch full page */
+  .print-ecg-chart { width: 90%; max-width: 700px; margin: 0 auto; }
+  .print-ecg-chart canvas { width: 100% !important; height: 360px !important; display: block; filter: drop-shadow(0 0 6px var(--color-secondary)); }
+
+  /* heading neon effect */
+  .print-header { color: var(--color-primary); text-shadow: 0 0 6px var(--color-primary); }
+
+  @media print {
+    .main-sidebar, .navbar, .main-footer, .brand-link { display: none !important; }
+    body { margin: 0; }
+    .container { padding: 0; }
+    /* Slightly narrower for printer margins */
+    .print-ecg-chart { max-width: 800px; }
+    /* preserve dark background in print if possible */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
+</style>
+<div class="container">
+  <h2 class="mb-2">IN ECG: {{ ecg['name'] }} ({{ ecg['_id'] }})</h2>
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card p-3 mb-3">
+        <div class="print-ecg-chart">
+          <canvas id="ecgChart" width="700" height="360"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% set hr = ecg.get('heart_rate') %}
+  {% set hr_status = 'normal' %}
+  {% if hr is not none %}
+    {% if hr < 60 or hr > 100 %}
+      {% set hr_status = 'warning' %}
+    {% endif %}
+    {% if hr < 50 or hr > 120 %}
+      {% set hr_status = 'danger' %}
+    {% endif %}
+  {% endif %}
+  {% set hr_abnormal = hr_status != 'normal' %}
+  <div class="row">
+    <div class="col-12">
+      <div class="card diagnosis-card mb-3 {% if hr_abnormal %}abnormal{% endif %} p-3">
+        <span class="badge status-{{ hr_status }} ms-2">{{ hr_status.capitalize() }}</span>
+        <h5 class="mb-2"><i data-feather="heart" class="icon-lg"></i> Kết quả chẩn đoán</h5>
+        {% if ecg.get('prediction_label') %}
+          <div class="mb-2"><strong class="text-uppercase">{{ ecg.prediction_label }}</strong></div>
+          {% if ecg.get('prediction_desc') %}
+            <div class="small text-muted mb-2">{{ ecg.prediction_desc.replace('. ', '.<br>')|safe }}</div>
+          {% endif %}
+        {% elif ecg.get('prediction') is not none %}
+          <div class="mb-2">Mã: {{ ecg.prediction }}</div>
+        {% else %}
+          <div class="text-muted mb-2">Chưa có kết quả</div>
+        {% endif %}
+        <hr>
+        <div class="mb-1 bpm-display {{ hr_status }}{% if hr_abnormal %}abnormal{% endif %}">
+          <i data-feather="heart"></i>
+          {% if hr is not none %}{{ "%0.1f"|format(hr) }} BPM{% else %}<span class="text-muted">không thể tính</span>{% endif %}
+        </div>
+        <div class="mb-1"><strong>THỜI GIAN:</strong> {{ ecg['timestamp']|datetimeformat }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/static/js/ecg.js"></script>
+<script>
+  // load the ECG and auto-print when chart is ready
+  window.addEventListener('load', function(){
+    loadECG("{{ ecg['_id'] }}");
+    // give Chart.js a moment to draw
+    setTimeout(function(){ window.print(); }, 600);
+  });
+</script>
+{% endblock %}

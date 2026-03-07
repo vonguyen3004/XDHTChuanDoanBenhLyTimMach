@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-lg">
+  <div class="card-header" style="background: var(--color-bg-alt);">
+      <h1 class="mb-0" style="color: var(--color-primary);"><i data-feather="file-plus" class="me-2"></i> Upload File ECG</h1>
+  </div>
+  <div class="card-body p-4">
+  <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data" class="row g-3">
+      <div class="col-12">
+        <label class="form-label text-uppercase" for="fileInput">Kéo thả file hoặc nhấp để chọn (CSV)</label>
+        <div id="dropZone" class="border border-secondary rounded p-4 text-center position-relative" style="cursor:pointer;">
+            <i data-feather="file-text" style="color: var(--color-primary);"></i>
+            <p id="dropText" class="text-uppercase mt-2" style="color: var(--color-text);">Kéo tập tin CSV vào đây</p>
+            <!-- full‑size transparent input covers zone; click anywhere opens dialog -->
+            <input id="fileInput" class="form-control" type="file" name="file" accept=".csv"
+                   style="opacity:0; position:absolute; left:0; top:0; width:100%; height:100%; cursor:pointer;">
+        </div>
+      </div>
+      <div class="col-12">
+        <button id="submitBtn" class="btn btn-primary btn-lg mt-2 text-uppercase" type="submit"><i data-feather="upload"></i> Gửi</button>
+      </div>
+  </form>
+</div>
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const dropText = document.getElementById('dropText');
+const submitBtn = document.getElementById('submitBtn');
+
+['dragover','dragenter'].forEach(evt=>{
+    dropZone.addEventListener(evt,e=>{
+        e.preventDefault();
+        dropZone.classList.add('bg-light');
+    });
+});
+['dragleave','dragend','drop'].forEach(evt=>{
+    dropZone.addEventListener(evt,e=>{
+        e.preventDefault();
+        dropZone.classList.remove('bg-light');
+    });
+});
+
+// handle drop to update text
+dropZone.addEventListener('drop', e=>{
+    const files = e.dataTransfer.files;
+    if(files.length) {
+        fileInput.files = files;
+        dropText.textContent = files[0].name;
+    }
+});
+
+// update text when user chooses via dialog
+fileInput.addEventListener('change', ()=>{
+    if(fileInput.files.length) {
+        dropText.textContent = fileInput.files[0].name;
+    }
+});
+
+// prevent submission when no file selected and disable button on submit
+const form = document.getElementById('uploadForm');
+form.addEventListener('submit', e=>{
+    if(!fileInput.files.length) {
+        e.preventDefault();
+        alert('Vui lòng chọn tệp CSV trước khi gửi.');
+        return;
+    }
+    // disable button to avoid double-click
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}

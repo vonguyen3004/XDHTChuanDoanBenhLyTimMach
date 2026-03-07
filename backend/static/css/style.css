@@ -1,0 +1,550 @@
+/* typography & base */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
+:root {
+    /* primary accent neon ECG green */
+    --color-primary: #00E5A8;
+    --color-primary-light: #33ccb0; /* lighter tone if needed */
+    --color-secondary: #00E5A8;
+    /* semantic colors */
+    --color-success: #00E5A8;
+    --color-warning: #FFB020;
+    --color-danger: #FF4D4F;
+    /* background palette */
+    --color-bg: #0B1420;            /* deep dark navy */
+    --color-bg-alt: #0E1624;        /* slightly lighter for panels */
+    --card-bg: #111C2E;             /* card background */
+    --card-border: #1F2A3D;         /* card border */
+    /* text colors */
+    --color-text-title: #E6EDF3;
+    --color-text: #A8B3C2;
+    --color-text-muted: #6B778C;
+    --card-radius: 12px;
+    --transition-fast: 0.2s;
+    --ecg-line: var(--color-primary);
+    --ecg-grid: rgba(255,255,255,0.05);
+    /* status badge utilities */
+    --status-normal: var(--color-success);
+    --status-warning: var(--color-warning);
+    --status-danger: var(--color-danger);
+}
+
+/* dark mode overrides */
+body.dark {
+    --color-bg: #1f1f2e;
+    --color-bg-alt: #121212;
+    --color-text: #e0e0e0;
+    --color-primary: #0dcaf0;        /* neon teal accent */
+    --color-primary-light: #38d9a9;
+    --color-secondary: #845ef7;
+    --color-success: #37b24d;
+    --color-danger: #f03e3e;
+}
+
+body {
+    /* use Cambria as primary serif font for high-end medical look */
+    font-family: Cambria, "Times New Roman", Times, serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    animation: fadeIn 0.5s ease-in;
+    position: relative;
+    overflow: hidden;
+}
+
+/* subtle scanline overlay */
+body::before {
+    content: '';
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.025) 3px
+    );
+    pointer-events: none;
+    z-index: 9999;
+}
+
+/* fade-in utility */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* uppercase headings */
+h1,h2,h3,h4,h5,h6 {
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px;
+}
+/* additional heading selectors (Material Dashboard containers) */
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6 {
+    text-transform: uppercase !important;
+}
+
+/* navbar and sidebar dark style */
+.main-header .navbar,
+.main-header .navbar-nav .nav-link {
+    background: var(--color-bg-alt) !important;
+    color: var(--color-text-title) !important;
+}
+.sidebar .nav-link p,
+.navbar .navbar-brand {
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px;
+    color: var(--color-text);
+}
+.main-sidebar {
+    background: var(--color-bg-alt);
+}
+.main-sidebar .nav-link {
+    color: var(--color-text);
+    transition: box-shadow var(--transition-fast);
+}
+.main-sidebar .nav-link:hover {
+    box-shadow: inset 4px 0 0 var(--color-primary);
+    background: rgba(0,229,168,0.05); /* subtle accent tint */
+}
+.main-sidebar .nav-link.active {
+    box-shadow: inset 4px 0 0 var(--color-primary);
+    color: var(--color-primary);
+}
+.main-sidebar .nav-icon { color: var(--color-text); }
+/* chart area */
+#ecgChart, #uploadChart { width:100%; height:100%; }
+
+/* status badge styling */
+.badge.status-normal {background: var(--status-normal); color: var(--color-text-dark);}
+.badge.status-warning {background: var(--status-warning);}
+.badge.status-danger {background: var(--status-danger);}
+/* allow horizontal scroll if chart becomes wider than container */
+#ecgChart { display:block; min-width:800px; }
+
+/* additional spacing */
+textarea { width:100%; }
+/* form controls dark */
+.form-control {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--color-text);
+}
+.form-control:focus { background: var(--card-bg); color: var(--color-text); }
+
+/* inputs in date, search etc */
+.input-group-text { background: var(--card-bg); color: var(--color-text); border:1px solid var(--card-border); }
+
+/* table header dark */
+.table thead th { background: var(--card-bg); color: var(--color-text); }
+/* card tweaks for dark ICU look */
+.card {
+    background: var(--card-bg);
+    box-shadow: 0 0 6px rgba(0,229,168,0.3);
+    border-radius: var(--card-radius);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 10px rgba(0,229,168,0.6);
+}
+.card-header {
+    background: var(--color-bg-alt);
+    border-bottom: 0;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* buttons */
+.btn {
+    border-radius: 0.3rem;
+    transition: transform 0.1s ease-in-out;
+}
+.btn:hover {
+    transform: translateY(-1px);
+}
+/* table header uppercase and centered */
+.table thead th {
+    text-transform: uppercase !important;
+    text-align: center !important;
+}
+.table tbody td {
+    text-align: center;
+}
+/* footer centering */
+.main-footer, .footer .copyright {
+    text-align: center;
+}
+
+/* other custom styles */
+/* ensure content area stretches and footer sticks to bottom */
+html, body, .wrapper {
+    height: 100%;
+}
+.wrapper {
+    display: flex;
+    flex-direction: column;
+}
+.content-wrapper {
+    flex: 1;
+    padding-bottom: 0;
+}
+.content-wrapper {
+    overflow: auto; /* make content area scrollable instead of whole page */
+    -webkit-overflow-scrolling: touch;
+}
+/* hide global page scrollbar; content will scroll inside .content-wrapper */
+html, body { overflow: hidden; }
+.main-footer {
+    flex-shrink: 0;
+}
+/* history table container scroll */
+.history-table {
+    max-height: 400px; /* adjust as needed */
+    overflow-y: auto;
+    display: block;
+    position: relative;
+    z-index: 50; /* bring table above other content */
+}
+
+/* utility spacing for forms using .d-flex (used in header cards) */
+.card form.d-flex { gap: 1rem; }
+.card form.d-flex label { font-weight: 600; }
+/* ensure the chart card doesn't overlay the table */
+.history-chart-card {
+    position: relative;
+    z-index: 1;
+    /* moderate size: responsive but not overwhelming */
+    min-height: 45vh;
+    max-height: 52vh;
+    padding: 1rem;
+    /* card itself stays full width; inner wrapper will constrain chart */
+}
+/* placeholder inside chart card when no data */
+.history-placeholder {
+    background: transparent;
+    color: #6c757d;
+}
+/* ensure the history chart canvas is centered and not too wide */
+.history-chart-wrapper {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    overflow-x: auto; /* allow scrolling when canvas is wider */
+}
+.history-chart-wrapper.fullwidth {
+    max-width: none;
+    /* already width 100%, so it spans container; may still scroll if inner canvas larger */
+}
+.history-chart-wrapper canvas {
+    /* let the canvas size to its intrinsic or max width instead of stretching */
+    width: 100% !important;
+    height: 340px !important; /* slightly taller */
+    min-height: 300px;
+    max-height: 380px;
+    display: block;
+}
+
+/* ensure table area uses contained scrolling and not the whole page */
+.history-table {
+    max-height: 360px; /* allow table to show more rows while still contained */
+    overflow-y: scroll;   /* always show vertical scrollbar */
+    overflow-x: auto;
+}
+/* modern card styling */
+.card {
+    background: var(--color-bg);
+    border-radius: var(--card-radius);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+/* card header dark accent */
+.card-header {
+    background: var(--color-bg-alt);
+    border-bottom: 1px solid var(--card-border);
+    font-weight: 600;
+    color: var(--color-text-title);
+}
+
+/* buttons improved */
+.btn {
+    border-radius: 6px;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+}
+.btn-primary {
+    background: var(--card-bg);
+    border-color: var(--card-border);
+    color: var(--color-text);
+}
+.btn-primary:hover {
+    background: var(--card-border);
+    border-color: var(--card-border);
+    box-shadow: 0 0 4px var(--color-primary);
+}
+.btn::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255,255,255,0.3);
+    opacity: 0;
+    border-radius: 100%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease, opacity 0.3s ease;
+}
+.btn:active::after {
+    width: 200px;
+    height: 200px;
+    opacity: 1;
+    transition: 0s;
+}
+.btn:hover {
+    transform: translateY(-1px) scale(1.02);
+}
+
+/* stat cards (dashboard) */
+.stat-card .card {
+    color: var(--color-text-title);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+}
+.stat-card .card-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.stat-card .card-icon {
+    font-size: 2.5rem;
+    color: rgba(255,255,255,0.7);
+}
+
+/* enlarge feather SVGs globally for better visibility */
+.feather {
+    width: 1.5em;
+    height: 1.5em;
+}
+
+/* provide a larger helper class when extra big icons are needed */
+.icon-lg {
+    width: 2rem !important;
+    height: 2rem !important;
+}
+.stat-card .card h6,
+.stat-card .card h2 {
+    color: var(--color-text-title);
+}
+
+/* history table modern look */
+.history-table table {
+    border-collapse: separate;
+}
+.history-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--color-bg);
+    z-index: 10;
+    box-shadow: 0 2px 4px -1px rgba(0,0,0,0.1);
+}
+.history-table tbody tr:hover {
+    background: rgba(25,118,210,0.05);
+}
+.history-table .btn {
+    margin: 0 2px;
+}
+
+/* radio pills for period filter */
+.pill-group .btn {
+    border-radius: 50px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* badge time style neon blue */
+.time-badge {
+    background: var(--color-primary);
+    color: #000;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 8px;
+    box-shadow: 0 0 6px var(--color-primary);
+}
+
+/* upload drop zone dark style */
+#dropZone {
+    border: 2px dashed var(--color-primary);
+    border-radius: var(--card-radius);
+    padding: 2rem;
+    background: var(--card-bg);
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+#dropZone:hover, #dropZone.bg-light {
+    box-shadow: 0 0 10px var(--color-primary);
+    border-color: var(--color-primary-light);
+}
+#dropZone i.fa { color: var(--color-primary); }
+
+/* ECG detail container dark */
+.ecg-card {
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: var(--card-radius);
+}
+/* apply grid only to the chart canvas itself */
+#ecgChart {
+    background-image: linear-gradient(var(--ecg-grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--ecg-grid) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+/* make chart canvas glow */
+.ecg-card canvas {
+    filter: drop-shadow(0 0 6px var(--color-secondary));
+}
+
+/* diagnosis card styles */
+.diagnosis-card {
+    border-left: 4px solid var(--color-success);
+    transition: box-shadow var(--transition-fast);
+}
+.diagnosis-card.abnormal {
+    border-color: var(--color-danger);
+    box-shadow: 0 0 8px var(--color-danger);
+}
+.diagnosis-card:not(.abnormal) {
+    box-shadow: 0 0 8px var(--color-secondary);
+}
+
+/* bpm big display neon */
+.bpm-display {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--color-success);
+    display: flex;
+    align-items: center;
+    transition: color var(--transition-fast), text-shadow var(--transition-fast);
+}
+.bpm-display.normal { color: var(--color-success); }
+.bpm-display.warning { color: var(--color-warning); text-shadow: 0 0 4px var(--color-warning); }
+.bpm-display.danger { color: var(--color-danger); text-shadow: 0 0 8px var(--color-danger); }
+.bpm-display.abnormal { color: var(--color-danger); text-shadow: 0 0 8px var(--color-danger); }
+.bpm-display i {
+    margin-right: 0.5rem;
+    animation: heartbeat 1s infinite;
+    color: inherit;
+}
+@keyframes heartbeat {
+    0%,100% { transform: scale(1); }
+    25%,75% { transform: scale(1.2); }
+}
+
+/* sidebar refinements for high-end look */
+.main-sidebar {
+    background: var(--color-bg-alt);
+}
+.main-sidebar .nav-link {
+    color: var(--color-text);
+    transition: background var(--transition-fast);
+}
+.main-sidebar .nav-link.active, .main-sidebar .nav-link:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--color-text-title);
+}
+.main-sidebar .nav-icon {
+    color: var(--color-text);
+}
+.main-sidebar .brand-link {
+    background: none;
+    color: var(--color-text-title);
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+/* footer minimal dark */
+.main-footer {
+    background: var(--color-bg);
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    color: var(--color-text);
+    border-top: 1px solid var(--card-border);
+}
+
+/* any card fade-in */
+.card { animation: fadeIn 0.4s ease-in; }
+
+/* make radio pills flex container spacing */
+.pill-group { display: flex; gap: 0.5rem; }
+.pill-group .btn { background: var(--card-bg); color: var(--color-text); }
+.pill-group .btn.active, .pill-group .btn:hover { background: var(--color-primary); color: #000; }
+
+/* animation for hover raising cards already above */
+
+/* clock and theme toggle in navbar */
+#clock {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-left: auto;
+    color: var(--color-text);
+}
+#themeToggle {
+    margin-left: 1rem;
+}
+
+/* neon button outlines */
+.btn-outline-primary {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+.btn-outline-primary:hover {
+    background: rgba(0,229,168,0.1);
+    color: var(--color-primary);
+    box-shadow: 0 0 4px var(--color-primary);
+}
+.btn-outline-danger {
+    color: var(--color-danger);
+    border-color: var(--color-danger);
+}
+.btn-outline-danger:hover {
+    background: rgba(255,77,79,0.1);
+    color: var(--color-danger);
+    box-shadow: 0 0 4px var(--color-danger);
+}
+
+.btn-outline-success {
+    color: var(--color-success);
+    border-color: var(--color-success);
+}
+.btn-outline-success:hover {
+    background: rgba(0,229,168,0.1);
+    color: var(--color-success);
+    box-shadow: 0 0 4px var(--color-success);
+}
+
+.text-muted { color: var(--color-text-muted) !important; }
+
+/* table dark style */
+.table {
+    color: var(--color-text);
+}
+.history-table table {
+    background: var(--color-bg-alt);
+}
+.history-table tbody tr:hover {
+    background: #1f2a44;
+}
+
+/* upload/history chart default colors (if not overridden JS) */
+.chartjs-render-monitor {
+    filter: drop-shadow(0 0 6px var(--color-primary));
+}
+
+/* minimal now that Material Dashboard handles most visuals */

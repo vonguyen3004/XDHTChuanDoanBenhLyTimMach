@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hệ Thống ECG</title>
+    <!-- AdminLTE & Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+    <link rel="icon" href="/static/img/favicon.ico" />
+    <!-- using system font Cambria for a clean readable style -->
+    <!-- Feather icons (light line style) -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+</head>
+<body class="hold-transition sidebar-mini dark">
+<div class="wrapper">
+
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+      <!-- Left navbar links -->
+      <ul class="navbar-nav w-100 align-items-center">
+        <li class="nav-item">
+          <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i data-feather="menu"></i></a>
+        </li>
+        <span id="clock" class="ml-auto"></span>
+        <button id="themeToggle" class="btn btn-sm btn-secondary" title="Chuyển màu chủ đề"><i data-feather="moon"></i></button>
+      </ul>
+    </nav>
+    <!-- /.navbar -->
+
+    <!-- Main Sidebar Container -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+      <!-- Brand Logo -->
+      <a href="/dashboard" class="brand-link">
+        <i data-feather="heart" class="ml-2"></i>
+        <span class="brand-text font-weight-light">AI ECG</span>
+      </a>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- sidebar menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+            <li class="nav-item">
+              <a href="/dashboard" class="nav-link">
+                <i data-feather="bar-chart-2" class="nav-icon"></i>
+                <p>Dashboard</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/upload" class="nav-link">
+                <i data-feather="upload" class="nav-icon"></i>
+                <p>Upload ECG</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/history" class="nav-link">
+                <i data-feather="clock" class="nav-icon"></i>
+                <p>Lịch sử</p>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+      <!-- Main content -->
+      <section class="content pt-3">
+        <div class="container-fluid">
+            {% block content %}{% endblock %}
+        </div><!-- /.container-fluid -->
+      </section>
+    </div>
+
+    <!-- Main Footer -->
+    <footer class="main-footer">
+      <strong><i data-feather="heart" class="text-danger"></i> © 2026 HỆ THỐNG CHẨN ĐOÁN BỆNH LÝ TIM MẠCH</strong>
+    </footer>
+</div>
+<!-- ./wrapper -->
+
+<!-- AdminLTE JS -->
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<script>
+// feather icons replace
+feather.replace({ 'stroke-width': 1.5, width:16, height:16 });
+
+// theme toggle + persistence
+(function(){
+  const btn = document.getElementById('themeToggle');
+  const icon = btn.querySelector('i');
+  function updateIcon(){
+    const name = document.body.classList.contains('dark') ? 'sun' : 'moon';
+    icon.setAttribute('data-feather', name);
+    feather.replace({ 'stroke-width': 1.5, width:16, height:16 });
+  }
+  btn.addEventListener('click', ()=>{
+    document.body.classList.toggle('dark');
+    localStorage.theme = document.body.classList.contains('dark')? 'dark':'light';
+    updateIcon();
+  });
+  if(localStorage.theme==='dark') document.body.classList.add('dark');
+  updateIcon();
+})();
+
+// live clock
+(function(){
+  const clk = document.getElementById('clock');
+  function tick(){
+    const now=new Date();
+    clk.textContent=now.toLocaleTimeString('vi-VN',{hour12:false});
+  }
+  setInterval(tick,1000);
+  tick();
+})();
+</script>
+</body>
+</html>

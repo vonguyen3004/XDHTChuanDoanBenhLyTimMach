@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ECG Diagnosis Support</title>
+    <script src="script.js" defer></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        #result { margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>ECG Diagnosis Support System</h1>
+    <p>Upload or paste ECG data to get a prediction.</p>
+    <textarea id="ecgData" rows="10" cols="50" placeholder="Enter ECG signal as comma-separated values"></textarea><br>
+    <button id="predictBtn">Predict</button>
+
+    <div id="result"></div>
+</body>
+</html>

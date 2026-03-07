@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Danh sách ECG</h1>
+<div class="card shadow-lg mb-4">
+  <div class="card-header">
+      <h2 class="mb-0" style="color: var(--color-primary);"><i data-feather="list" class="me-2"></i> Danh sách ECG</h2>
+  </div>
+  <div class="card-body p-4">
+    <div class="table-responsive history-table">
+      <table class="table table-hover text-center">
+        <thead><tr><th class="text-uppercase">ID</th><th class="text-uppercase">TÊN</th><th class="text-uppercase">THAO TÁC</th></tr></thead>
+        <tbody>
+        {% for ecg in ecgs %}
+        <tr>
+         <td>{{ ecg['_id'] }}</td>
+         <td>{{ ecg['name'] }}</td>
+         <td>
+          <a class="btn btn-sm btn-outline-primary" href="/ecg/{{ ecg['_id'] }}">CHI TIẾT</a>
+          <a class="btn btn-sm btn-outline-danger" href="/delete/{{ ecg['_id'] }}" onclick="return confirm('Xóa bản ghi này?');">XÓA</a>
+         </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

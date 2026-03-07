@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>LỊCH SỬ PHÂN TÍCH ECG</h1>
+<div class="card shadow-lg mb-4">
+  <div class="card-header">
+      <h2 class="mb-0" style="color: var(--color-primary);"><i data-feather="search" class="me-2"></i> Lịch sử phân tích ECG</h2>
+  </div>
+  <div class="card-body p-4">
+<form method="get" class="row g-3">
+      <div class="col-md-4">
+        <div class="input-group">
+          <span class="input-group-text"><i data-feather="search"></i></span>
+          <input class="form-control" type="text" name="q" placeholder="Tìm tên, ID hoặc ngày" value="{{ request.args.get('q','') }}" list="suggestions">
+        </div>
+        <datalist id="suggestions"></datalist>
+      </div>
+      <div class="col-md-2">
+        <input class="form-control" type="date" name="start_date" value="{{ request.args.get('start_date','') }}" placeholder="Từ ngày">
+      </div>
+      <div class="col-md-2">
+        <input class="form-control" type="date" name="end_date" value="{{ request.args.get('end_date','') }}" placeholder="Đến ngày">
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary" type="submit"><i data-feather="search"></i> TÌM KIẾM </button>
+      </div>
+      <!-- period filter styled as neon pill buttons -->
+      <div class="col d-flex align-items-center ms-5">
+          <div class="pill-group btn-group" role="group">
+              <label class="btn btn-sm {% if period=='7' %}active{% endif %}">
+                  <input type="radio" name="period" id="p7" value="7" autocomplete="off" {% if period=='7' %}checked{% endif %} onchange="this.form.submit()">7 NGÀY
+              </label>
+              <label class="btn btn-sm {% if period=='30' %}active{% endif %}">
+                  <input type="radio" name="period" id="p30" value="30" autocomplete="off" {% if period=='30' %}checked{% endif %} onchange="this.form.submit()">30 NGÀY
+              </label>
+              <label class="btn btn-sm {% if period=='12m' %}active{% endif %}">
+                  <input type="radio" name="period" id="p12m" value="12m" autocomplete="off" {% if period=='12m' %}checked{% endif %} onchange="this.form.submit()">12 THÁNG
+              </label>
+          </div>
+      </div>
+</form>
+  </div>
+</div>
+<div class="card p-3 mb-4 history-chart-card">
+  {% if chart_values and chart_values|length > 0 %}
+    <div class="history-chart-wrapper{% if period!='7' %} fullwidth{% endif %}">
+      <canvas id="historyChart"></canvas>
+    </div>
+  {% else %}
+    <div class="history-placeholder d-flex align-items-center justify-content-center" style="height:100%;">
+      <div class="text-center text-muted">
+        <p class="mb-0">Không có dữ liệu biểu đồ.</p>
+        <small>Thử thay đổi bộ lọc hoặc chọn ngày khác.</small>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+
+<div class="card p-3 mb-4">
+  <div class="table-responsive history-table">
+  <table class="table table-hover text-center">
+  <thead><tr><th class="text-uppercase">Chọn</th><th class="text-uppercase">ID</th><th class="text-uppercase">Tên</th><th class="text-uppercase">Ngày</th><th class="text-uppercase">Thao tác</th></tr></thead>
+<tbody>
+{% for ecg in ecgs %}
+<tr>
+ <td class="align-middle"><input type="radio" name="selected_ecg" value="{{ ecg['_id']|string }}"></td>
+ <td>{{ ecg['_id']|string }}</td>
+ <td>{{ ecg['name'] }}</td>
+ <td><span class="time-badge">{{ ecg['timestamp']|datetimeformat }}</span></td>
+ <td>
+   <a class="btn btn-sm btn-outline-primary" href="/ecg/{{ ecg['_id']|string }}">CHI TIẾT</a>
+   <a class="btn btn-sm btn-outline-danger" href="/delete/{{ ecg['_id']|string }}" onclick="return confirm('Xóa bản ghi này?');">XÓA</a>
+ </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+  <div class="d-flex w-100 justify-content-end mt-2">
+    <button class="btn btn-outline-primary me-4" type="button" id="printBtn" onclick="printSelected()"><i data-feather="printer"></i> IN </button>
+    <a class="btn btn-outline-success" href="/history/export?q={{ q }}&period={{ period }}&start_date={{ request.args.get('start_date','') }}&end_date={{ request.args.get('end_date','') }}"><i data-feather="file-text"></i> XUẤT CSV</a>
+  </div>
+<!-- hidden container for history chart data -->
+<div id="historyData" data-labels='{{ chart_labels|tojson }}' data-values='{{ chart_values|tojson }}' style="display:none;"></div>
+<script>
+// build a simple bar chart of counts per day, reuse labels/values from dashboard for demo
+const histCanvas = document.getElementById('historyChart');
+if(histCanvas){
+  const histCtx = histCanvas.getContext('2d');
+  const dataContainer = document.getElementById('historyData');
+  const labels = JSON.parse(dataContainer.dataset.labels);
+  const values = JSON.parse(dataContainer.dataset.values);
+  // set a minimum width proportional to number of data points when period isn't 7
+  if(labels.length > 7){
+    // 40px per bar as a starting point
+    histCanvas.style.minWidth = (labels.length * 40) + 'px';
+  }
+  // helper for hex-to-rgba
+  function hex2rgba(hex, a){
+      hex = hex.trim().replace('#','');
+      if(hex.length===3) hex = hex.split('').map(h=>h+h).join('');
+      const r=parseInt(hex.substr(0,2),16);
+      const g=parseInt(hex.substr(2,2),16);
+      const b=parseInt(hex.substr(4,2),16);
+      return `rgba(${r},${g},${b},${a})`;
+  }
+  // gradient for bars using accent
+  const accent = getComputedStyle(document.body).getPropertyValue('--color-primary');
+  const histGradient = histCtx.createLinearGradient(0,0,0,400);
+  histGradient.addColorStop(0, hex2rgba(accent,0.6));
+  histGradient.addColorStop(1, hex2rgba(accent,0.2));
+  new Chart(histCtx,{
+    type:'bar',
+    data:{labels:labels,datasets:[{label:'LƯỢT TẢI',data:values,backgroundColor:histGradient,borderColor:getComputedStyle(document.body).getPropertyValue('--color-primary'),borderWidth:1}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color: getComputedStyle(document.body).getPropertyValue('--color-text')} },
+        tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleFont:{size:12},bodyFont:{size:11},cornerRadius:4},
+        zoom:{pan:{enabled:true,mode:'x'},zoom:{wheel:{enabled:true},mode:'x'}}
+      },
+      scales:{
+        x:{grid:{color: 'rgba(255,255,255,0.05)'},ticks:{color: getComputedStyle(document.body).getPropertyValue('--color-text')}},
+        y:{grid:{color: 'rgba(255,255,255,0.05)'},ticks:{color: getComputedStyle(document.body).getPropertyValue('--color-text')}}
+      }
+    }
+  });
+}
+</script>
+<script>
+// clear period radios if user enters custom date range
+(function(){
+  const start = document.querySelector('input[name="start_date"]');
+  const end = document.querySelector('input[name="end_date"]');
+  if(start && end){
+    [start,end].forEach(el=>{
+      el.addEventListener('change', function(){
+        if(start.value || end.value){
+          document.querySelectorAll('input[name="period"]').forEach(r=>r.checked=false);
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+// autocomplete for history search using datalist, with debounce
+(function(){
+  const inp = document.querySelector('input[name="q"]');
+  const list = document.getElementById('suggestions');
+  if(!inp || !list) return;
+  let timer = null;
+  inp.addEventListener('input', function(){
+    clearTimeout(timer);
+    const v = this.value.trim();
+    if(!v){ list.innerHTML = ''; return; }
+    timer = setTimeout(()=>{
+      fetch('/history/suggest?q='+encodeURIComponent(v))
+        .then(r=>r.json())
+        .then(arr=>{
+          list.innerHTML = '';
+          arr.forEach(s=>{
+            const opt = document.createElement('option');
+            opt.value = s;
+            list.appendChild(opt);
+          });
+        }).catch(()=>{});
+    }, 250);
+  });
+})();
+</script>
+<script>
+function printSelected(){
+  const sel = document.querySelector('input[name="selected_ecg"]:checked');
+  if(!sel){
+    alert('Vui lòng chọn một bản ghi để in biểu đồ.');
+    return;
+  }
+  const id = sel.value;
+  // open print-friendly view in a new window/tab
+  window.open('/ecg/'+encodeURIComponent(id)+'/print','_blank');
+}
+</script>
+{% endblock %}
