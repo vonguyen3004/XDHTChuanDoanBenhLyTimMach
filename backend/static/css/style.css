@@ -339,6 +339,52 @@ select.form-control option{background:var(--card);color:var(--text);}
 }
 .search-bar input::placeholder{color:var(--text-muted);}
 
+.history-filter-form{
+    display:grid;
+    grid-template-columns:minmax(280px,1.8fr) repeat(2,minmax(180px,.7fr)) auto;
+    gap:12px;
+    align-items:end;
+}
+.history-filter-item{min-width:0;}
+.history-filter-search{min-width:280px;}
+.history-filter-date{min-width:180px;}
+.history-filter-label,
+.history-filter-form .form-label{
+    display:block;
+    margin-bottom:8px;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+}
+.history-search-bar{
+    min-height:48px;
+    border-radius:12px;
+    background:rgba(15,23,42,.55);
+}
+.history-date-input{
+    min-height:48px;
+    border-radius:12px;
+    background:rgba(15,23,42,.55);
+}
+.history-filter-actions{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+.history-search-btn,
+.history-period-btn{
+    min-height:44px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:700;
+    white-space:nowrap;
+}
+.history-search-btn{padding:0 16px;}
+.history-period-btn{padding:0 14px;}
+
 /* Progress Bar */
 .prog-bar{height:6px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;}
 .prog-fill{height:100%;background:var(--primary);border-radius:4px;transition:width .6s ease;}
@@ -524,6 +570,8 @@ select.form-control option{background:var(--card);color:var(--text);}
     .grid-2{grid-template-columns:1fr;}
     .grid-3{grid-template-columns:1fr 1fr;}
     .analyze-grid{grid-template-columns:1fr;}
+    .history-filter-form{grid-template-columns:1fr 1fr;}
+    .history-filter-actions{grid-column:1 / -1;}
 }
 @media(max-width:768px){
     .sidebar{transform:translateX(-100%);}
@@ -531,4 +579,5 @@ select.form-control option{background:var(--card);color:var(--text);}
     .main-wrapper{margin-left:0;}
     .stat-grid{grid-template-columns:1fr 1fr;}
     .page-content{padding:16px;}
+    .history-filter-form{grid-template-columns:1fr;}
 }

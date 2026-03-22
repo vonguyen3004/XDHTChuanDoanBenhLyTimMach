@@ -9,29 +9,29 @@
 
 <!-- Filter -->
 <div class="card" style="margin-bottom:20px;">
-  <form method="get" action="/history" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-    <div style="flex:0 1 580px;min-width:260px;">
+  <form method="get" action="/history" class="history-filter-form">
+    <div class="history-filter-item history-filter-search">
       <label class="form-label">Tìm kiếm</label>
       <div class="search-bar">
         <i data-feather="search" style="color:var(--text-muted);flex-shrink:0;width:16px;height:16px;"></i>
         <input type="text" name="q" placeholder="Tên BN, Mã BN, SĐT, File, ID..." value="{{ q if q is defined else '' }}">
       </div>
     </div>
-    <div style="width:220px;">
+    <div class="history-filter-item history-filter-date">
       <label class="form-label">Từ ngày</label>
-      <input type="date" name="start_date" class="form-control" value="{{ request.args.get('start_date','') }}" style="width:220px;">
+      <input type="date" name="start_date" class="form-control history-date-input" value="{{ request.args.get('start_date','') }}">
     </div>
-    <div style="width:220px;">
+    <div class="history-filter-item history-filter-date">
       <label class="form-label">Đến ngày</label>
-      <input type="date" name="end_date" class="form-control" value="{{ request.args.get('end_date','') }}" style="width:220px;">
+      <input type="date" name="end_date" class="form-control history-date-input" value="{{ request.args.get('end_date','') }}">
     </div>
-    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-      <button type="submit" class="btn btn-primary">
+    <div class="history-filter-actions">
+      <button type="submit" class="btn btn-primary history-search-btn">
         <i data-feather="search"></i> Tìm kiếm
       </button>
       {% for val, label in [('7','7 ngày'),('30','30 ngày'),('12m','12 tháng')] %}
       <button type="submit" name="period" value="{{ val }}"
-              class="btn {% if period == val %}btn-primary{% else %}btn-outline{% endif %}">
+              class="btn {% if period == val %}btn-primary{% else %}btn-outline{% endif %} history-period-btn">
         {{ label }}
       </button>
       {% endfor %}
