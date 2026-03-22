@@ -8,80 +8,61 @@ app_port: 7860
 pinned: false
 ---
 
-# He thong AI chan doan dien tam do ECG
+# Hệ thống AI chẩn đoán điện tâm đồ ECG
 
-Ung dung Flask ho tro:
-- phan tich ECG bang AI
-- xem lich su chan doan
-- bao cao va danh gia mo hinh
-- chay local bang Docker ma khong can cai Python, TensorFlow hay moi truong ao
+Ứng dụng Flask hỗ trợ:
+- phân tích ECG bằng AI
+- xem lịch sử chẩn đoán
+- báo cáo và đánh giá mô hình
+- chạy local bằng Docker mà không cần cài Python, TensorFlow hay môi trường ảo
 
 ## Link server
 
-Server dang chay tai:
+Server đang chạy tại:
 
 `https://zn3004-ecg-ai-flask.hf.space`
 
-## Chay nhanh bang Docker
+## Clone dự án
 
-Yeu cau duy nhat:
-- da cai `Docker Desktop`
+```bash
+git clone https://github.com/vonguyen3004/XDHTChuanDoanBenhLyTimMach.git
+cd XDHTChuanDoanBenhLyTimMach
+```
 
-Sau khi tai source code ve, mo terminal tai thu muc du an va chay:
+## Chạy nhanh bằng Docker
+
+Yêu cầu duy nhất:
+- đã cài `Docker Desktop`
+
+Sau khi clone dự án, mở terminal tại thư mục dự án và chạy:
 
 ```bash
 docker compose up --build
 ```
 
-Sau khi container khoi dong xong, mo:
+Sau khi container khởi động xong, mở:
 
 `http://localhost:7860`
 
-Voi cach nay:
-- Flask app chay trong container `web`
-- MongoDB chay trong container `mongo`
-- khong can cai them Python package hay tao virtual environment
+Với cách này:
+- Flask app chạy trong container `web`
+- MongoDB chạy trong container `mongo`
+- không cần cài thêm Python package hay tạo virtual environment
 
-## Dung lai he thong
+## Dừng hệ thống
 
 ```bash
 docker compose down
 ```
 
-Neu muon xoa ca du lieu Mongo local:
+Nếu muốn xóa cả dữ liệu Mongo local:
 
 ```bash
 docker compose down -v
 ```
 
-## Cau truc Docker
+## Ghi chú
 
-- `Dockerfile`: dong goi ung dung Flask
-- `docker-compose.yml`: chay cung luc web + MongoDB
-- `.dockerignore`: loai bo file cache/log/venv khi build
-
-## Chay khong dung Docker
-
-Neu can chay thu cong:
-
-```bash
-python backend/app.py
-```
-
-Nhung cach khuyen nghi de nop va demo la Docker Compose vi de tai ve va chay ngay.
-
-## Ghi chu
-
-- Khi chay local bang Docker Compose, ung dung tu dung MongoDB local trong container:
+- Khi chạy local bằng Docker Compose, ứng dụng tự dùng MongoDB local trong container:
   `mongodb://mongo:27017`
-- Khi deploy Hugging Face Space, app dung bien moi truong `MONGO_URI`
-- Mo hinh AI va file report da duoc dong kem trong repo
-
-## GitHub
-
-Repo nay da duoc chuan bi theo huong:
-- clone ve
-- chay `docker compose up --build`
-- truy cap `http://localhost:7860`
-
-Khong can tao moi truong ao hay cai thu vien Python bang tay.
+- Khi deploy Hugging Face Space, app dùng biến môi trường `MONGO_URI`
