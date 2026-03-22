@@ -8,7 +8,9 @@ import json
 from collections import Counter
 import numpy as np
 import joblib
+import certifi
 from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 from bson.objectid import ObjectId
 import pandas as pd
 from pathlib import Path
@@ -90,7 +92,12 @@ def format_datetime(value):
 app.jinja_env.filters['datetimeformat'] = format_datetime
 
 # --- database setup ------------------------------------------------
-client = MongoClient(MONGO_URI)
+client = MongoClient(
+    MONGO_URI,
+    tls=True,
+    tlsCAFile=certifi.where(),
+    server_api=ServerApi('1'),
+)
 db = client[DB_NAME]
 ecgs_collection = db.ecgs
 settings_collection = db.settings

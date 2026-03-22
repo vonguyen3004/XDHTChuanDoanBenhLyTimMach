@@ -6,3 +6,4 @@ pymongo
 matplotlib
 tensorflow
 wfdb
+certifi
