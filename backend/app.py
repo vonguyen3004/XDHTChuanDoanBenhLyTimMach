@@ -93,12 +93,20 @@ def format_datetime(value):
 app.jinja_env.filters['datetimeformat'] = format_datetime
 
 # --- database setup ------------------------------------------------
-client = MongoClient(
-    MONGO_URI,
-    tls=True,
-    tlsCAFile=certifi.where(),
-    server_api=ServerApi('1'),
-)
+def build_mongo_client(uri):
+    normalized = str(uri or '').strip().lower()
+    # Atlas / SRV connections need TLS + CA bundle in Docker/Hugging Face.
+    if normalized.startswith('mongodb+srv://'):
+        return MongoClient(
+            uri,
+            tls=True,
+            tlsCAFile=certifi.where(),
+            server_api=ServerApi('1'),
+        )
+    return MongoClient(uri)
+
+
+client = build_mongo_client(MONGO_URI)
 db = client[DB_NAME]
 ecgs_collection = db.ecgs
 settings_collection = db.settings

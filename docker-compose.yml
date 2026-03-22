@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: ecg-ai-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecg-ai-web
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      SECRET_KEY: ecg-ai-local-secret
+      PORT: 7860
+    ports:
+      - "7860:7860"
+
+volumes:
+  mongo_data:
