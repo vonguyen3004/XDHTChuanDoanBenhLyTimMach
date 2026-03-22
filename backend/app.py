@@ -1829,8 +1829,17 @@ def model_evaluation():
     class_report_raw = {}
     training_history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy': []}
 
-    report_path = ROOT_DIR / 'ml' / 'cnn_model' / 'classification_report.json'
-    history_path = ROOT_DIR / 'ml' / 'cnn_model' / 'training_history.json'
+    report_dir = ROOT_DIR / 'ml' / 'cnn_model' / 'reports'
+    report_path = (
+        report_dir / 'classification_report.json'
+        if (report_dir / 'classification_report.json').exists()
+        else ROOT_DIR / 'ml' / 'cnn_model' / 'classification_report.json'
+    )
+    history_path = (
+        report_dir / 'training_history.json'
+        if (report_dir / 'training_history.json').exists()
+        else ROOT_DIR / 'ml' / 'cnn_model' / 'training_history.json'
+    )
 
     if report_path.exists():
         try:
