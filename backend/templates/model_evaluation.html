@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Đánh giá mô hình - ECG AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Đánh giá Mô hình AI</h1>
+  <p class="page-subtitle">Chỉ số hiệu suất của mô hình CNN+BiLSTM trên tập kiểm tra PTB-XL</p>
+</div>
+
+<!-- Metrics -->
+<div class="stat-grid" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-icon"><i data-feather="check-circle"></i></div>
+    <div>
+      <div class="stat-value" id="metricAcc">--</div>
+      <div class="stat-label">Exact Match</div>
+    </div>
+  </div>
+  <div class="stat-card info">
+    <div class="stat-icon"><i data-feather="target"></i></div>
+    <div>
+      <div class="stat-value" id="metricPre">--</div>
+      <div class="stat-label">Precision (Micro)</div>
+    </div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-icon"><i data-feather="refresh-cw"></i></div>
+    <div>
+      <div class="stat-value" id="metricRec">--</div>
+      <div class="stat-label">Recall (Micro)</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i data-feather="award"></i></div>
+    <div>
+      <div class="stat-value" id="metricF1">--</div>
+      <div class="stat-label">F1-Score (Micro)</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:20px;">
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">F1-Score theo từng bệnh</span>
+    </div>
+    <div class="chart-wrapper" style="height:320px;"><canvas id="f1Chart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">Precision vs Recall</span>
+    </div>
+    <div class="chart-wrapper" style="height:320px;"><canvas id="prChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Per-class table -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header-row">
+    <span class="card-title">Báo cáo chi tiết theo nhãn</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="classTable">
+      <thead>
+        <tr>
+          <th>Nhãn</th><th>Tên bệnh</th>
+          <th>Precision</th><th>Recall</th><th>F1-Score</th><th>Support</th>
+        </tr>
+      </thead>
+      <tbody id="classBody">
+        <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px;">Đang tải...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Training history -->
+<div class="card">
+  <div class="card-header-row">
+    <span class="card-title">Lịch sử huấn luyện</span>
+  </div>
+  <div class="chart-wrapper" style="height:280px;"><canvas id="trainChart"></canvas></div>
+</div>
+
+<div id="reportData"
+     data-report='{{ class_report|tojson }}'
+     data-history='{{ training_history|tojson }}'
+     data-vn='{{ disease_vn|tojson }}'
+     style="display:none;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const el = document.getElementById('reportData');
+const report  = JSON.parse(el.dataset.report||'{}');
+const history = JSON.parse(el.dataset.history||'{}');
+const vn      = JSON.parse(el.dataset.vn||'{}');
+const C = {P:'#22c55e',W:'#f59e0b',D:'#ef4444',I:'#38bdf8',T:'#94a3b8',G:'rgba(255,255,255,.04)'};
+
+function pct(v){ return v!=null ? (v*100).toFixed(1)+'%' : '--'; }
+
+const base = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ labels:{ color:C.T, boxWidth:12 } } },
+  scales:{
+    x:{ grid:{ color:C.G }, ticks:{ color:C.T, maxRotation:45, font:{size:10} } },
+    y:{ grid:{ color:C.G }, ticks:{ color:C.T }, beginAtZero:true, max:100 }
+  }
+};
+
+// Fill metrics
+const micro = report['micro_avg']||report['micro avg']||{};
+document.getElementById('metricPre').textContent = pct(micro['precision']||micro['precision']);
+document.getElementById('metricRec').textContent = pct(micro['recall']);
+document.getElementById('metricF1').textContent  = pct(micro['f1_score']||micro['f1-score']);
+document.getElementById('metricAcc').textContent = report['exact_match']!=null ? pct(report['exact_match']) : 'N/A';
+
+// Per-class data
+const skip = new Set(['micro_avg','macro_avg','weighted_avg','samples_avg',
+                      'micro avg','macro avg','weighted avg','samples avg','exact_match']);
+const classes = Object.entries(report)
+  .filter(([k])=>!skip.has(k))
+  .map(([k,v])=>({
+    label:k, vn:vn[k]||k,
+    pre: v['precision']||0,
+    rec: v['recall']||0,
+    f1:  v['f1_score']||v['f1-score']||0,
+    sup: v['support']||0
+  }));
+
+if(classes.length){
+  // Table
+  document.getElementById('classBody').innerHTML = classes.map(c=>{
+    const col = c.f1>=.7?C.P:c.f1>=.5?C.W:C.D;
+    return `<tr>
+      <td><span class="badge badge-blue">${c.label}</span></td>
+      <td style="color:var(--text)">${c.vn}</td>
+      <td>${pct(c.pre)}</td><td>${pct(c.rec)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="prog-bar" style="width:80px;">
+            <div class="prog-fill" style="width:${(c.f1*100).toFixed(0)}%;background:${col};"></div>
+          </div>
+          <span style="color:${col};font-weight:600;">${pct(c.f1)}</span>
+        </div>
+      </td>
+      <td style="color:var(--text-muted)">${c.sup}</td>
+    </tr>`;
+  }).join('');
+
+  // F1 chart
+  new Chart(document.getElementById('f1Chart').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:classes.map(c=>c.label),
+      datasets:[{
+        label:'F1-Score',
+        data:classes.map(c=>+(c.f1*100).toFixed(1)),
+        backgroundColor:classes.map(c=>c.f1>=.7?'rgba(34,197,94,.7)':c.f1>=.5?'rgba(245,158,11,.7)':'rgba(239,68,68,.7)'),
+        borderRadius:4, borderSkipped:false
+      }]
+    },
+    options:{...base, plugins:{legend:{display:false}}}
+  });
+
+  // PR chart
+  new Chart(document.getElementById('prChart').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:classes.map(c=>c.label),
+      datasets:[
+        { label:'Precision', data:classes.map(c=>+(c.pre*100).toFixed(1)),
+          backgroundColor:'rgba(56,189,248,.6)', borderRadius:3 },
+        { label:'Recall',    data:classes.map(c=>+(c.rec*100).toFixed(1)),
+          backgroundColor:'rgba(245,158,11,.6)', borderRadius:3 }
+      ]
+    },
+    options:base
+  });
+}
+
+// Training history
+if(history.loss && history.loss.length){
+  const epochs = history.loss.map((_,i)=>'E'+(i+1));
+  new Chart(document.getElementById('trainChart').getContext('2d'),{
+    type:'line',
+    data:{
+      labels:epochs,
+      datasets:[
+        { label:'Train Loss', data:history.loss,
+          borderColor:C.P, backgroundColor:'transparent', borderWidth:2, tension:.3, pointRadius:0 },
+        { label:'Val Loss',   data:history.val_loss||[],
+          borderColor:C.D, backgroundColor:'transparent', borderWidth:2, tension:.3, pointRadius:0 }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:C.T, boxWidth:12 } } },
+      scales:{
+        x:{ grid:{ color:C.G }, ticks:{ color:C.T, maxTicksLimit:15 } },
+        y:{ grid:{ color:C.G }, ticks:{ color:C.T } }
+      }
+    }
+  });
+}
+
+feather.replace({'stroke-width':1.5,width:16,height:16});
+</script>
+{% endblock %}

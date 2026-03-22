@@ -1,0 +1,27 @@
+{% macro render(heart_rate, timestamp, hr_status='normal') %}
+  <div class="diag-subcard bpm-card bpm-{{ hr_status }}">
+    <div class="bpm-head">
+      <div class="bpm-label" style="font-size:25px;">Nhịp tim hiện tại</div>
+      <div class="bpm-state-chip">
+        {% if hr_status == 'normal' %}
+          ỔN ĐỊNH
+        {% elif hr_status == 'warning' %}
+          CẦN THEO DÕI
+        {% else %}
+          BẤT THƯỜNG
+        {% endif %}
+      </div>
+    </div>
+    <div class="bpm-main">
+      <i data-feather="heart" class="heart-icon"></i>
+      <div class="bpm-value">
+        {% if heart_rate is not none %}
+          {{ "%0.1f"|format(heart_rate) }} BPM
+        {% else %}
+          -- BPM
+        {% endif %}
+      </div>
+    </div>
+    <div class="bpm-time"><strong>Thời gian:</strong> {{ timestamp|datetimeformat }}</div>
+  </div>
+{% endmacro %}

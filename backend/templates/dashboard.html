@@ -1,105 +1,191 @@
 {% extends "base.html" %}
-{% block content %}
-<h1 style="color: var(--color-primary);">DASHBOARD TỔNG QUAN</h1>
-<div class="row">
-  <div class="col-md-3 mb-3">
-    <div class="card stat-card">
-      <div class="card-body">
-        <div>
-          <h6 class="text-muted"><i data-feather="file-text"></i> Tổng bản ghi</h6>
-          <h2 class="mb-0">{{ count }}</h2>
-        </div>
-        <i class="card-icon" data-feather="database"></i>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3 mb-3">
-    <div class="card stat-card">
-      <div class="card-body">
-        <div>
-          <h6 class="text-muted"><i data-feather="upload"></i> Upload hôm nay</h6>
-          <h2 class="mb-0">{{ today_uploads if today_uploads is defined else 0 }}</h2>
-        </div>
-        <i class="card-icon" data-feather="upload-cloud"></i>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3 mb-3">
-    <div class="card stat-card">
-      <div class="card-body">
-        <div>
-          <h6 class="text-muted"><i data-feather="heart"></i> Nhịp tim trung bình</h6>
-          <h2 class="mb-0">{{ avg_hr|round(1) }} BPM</h2>
-        </div>
-        <i class="card-icon" data-feather="heart"></i>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3 mb-3">
-    <div class="card stat-card">
-      <div class="card-body">
-        <div>
-          <h6 class="text-muted"><i data-feather="cpu"></i> Trạng thái AI</h6>
-          <h2 class="mb-0">{{ ai_status if ai_status is defined else 'Sẵn sàng' }}</h2>
-        </div>
-        <i class="card-icon" data-feather="cpu"></i>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="row">
-  <div class="col-12 mb-3">
-    <div class="card">
-      <div class="card-body">
-        <h6 class="text-muted">Biểu đồ upload theo ngày</h6>
-        <div style="height:300px;"><canvas id="uploadChart"></canvas></div>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- embed data attributes to avoid js lint errors -->
-<div id="uploadData" data-labels='{{ chart_labels|tojson }}' data-values='{{ chart_values|tojson }}' style="display:none;"></div>
-<script>
-// dummy data for chart - replace with real counts via API when available
-const ctx = document.getElementById('uploadChart').getContext('2d');
-const container = document.getElementById('uploadData');
-const labels = JSON.parse(container.dataset.labels);
-const values = JSON.parse(container.dataset.values);
-const darkTheme = true; // always dark in this theme
-// helper to convert hex color to rgba with alpha
-function hex2rgba(hex, a){
-    hex = hex.trim().replace('#','');
-    if(hex.length===3) hex = hex.split('').map(h=>h+h).join('');
-    const r=parseInt(hex.substr(0,2),16);
-    const g=parseInt(hex.substr(2,2),16);
-    const b=parseInt(hex.substr(4,2),16);
-    return `rgba(${r},${g},${b},${a})`;
-}
+{% block title %}Dashboard - ECG AI{% endblock %}
 
-// create gradient for line using current accent color
-const accent = getComputedStyle(document.body).getPropertyValue('--color-primary');
-const gradient = ctx.createLinearGradient(0,0,0,300);
-gradient.addColorStop(0, hex2rgba(accent,0.6));
-gradient.addColorStop(1, hex2rgba(accent,0.2));
-new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: labels,
-        datasets: [{ label: 'Upload', data: values, borderColor: getComputedStyle(document.body).getPropertyValue('--color-primary'), backgroundColor: gradient, fill:true, tension:0.3, borderWidth:2 }]
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard Tổng quan</h1>
+  <p class="page-subtitle">Theo dõi hoạt động phân tích ECG theo thời gian thực</p>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon"><i data-feather="database"></i></div>
+    <div>
+      <div class="stat-value">{{ count }}</div>
+      <div class="stat-label">Tổng ECG đã phân tích</div>
+    </div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-icon"><i data-feather="upload-cloud"></i></div>
+    <div>
+      <div class="stat-value">{{ today_uploads if today_uploads is defined else 0 }}</div>
+      <div class="stat-label">Phân tích hôm nay</div>
+    </div>
+  </div>
+  <div class="stat-card info">
+    <div class="stat-icon"><i data-feather="heart"></i></div>
+    <div>
+      <div class="stat-value">{{ avg_hr|round(0)|int if avg_hr else '--' }}</div>
+      <div class="stat-label">Nhịp tim TB (BPM)</div>
+    </div>
+  </div>
+  <div class="stat-card {% if ((ai_status if ai_status is defined else '')|string|lower) != 'online' %}danger{% endif %}">
+    <div class="stat-icon"><i data-feather="cpu"></i></div>
+    <div>
+      <div class="stat-value stat-value-text">{{ (ai_status if ai_status is defined else 'N/A')|upper }}</div>
+      <div class="stat-label">Trạng thái AI</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="grid-2 mb-3">
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">Hoạt động phân tích ECG (7 ngày)</span>
+    </div>
+    <div class="chart-wrapper"><canvas id="uploadChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">Độ tin cậy AI theo bệnh</span>
+    </div>
+    <div class="chart-wrapper"><canvas id="confidenceChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Row 2 -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">Bệnh được dự đoán nhiều nhất</span>
+      <a href="/analyze" class="btn btn-sm btn-primary">
+        <i data-feather="plus"></i> Phân tích mới
+      </a>
+    </div>
+    {% if top_diseases %}
+    <div>
+      {% for item in top_diseases %}
+      <div class="result-item">
+        <div>
+          <div class="result-name">{{ item.vn }}</div>
+          <div class="result-sub">{{ item.disease }}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:20px;font-weight:700;color:var(--primary);">{{ item.count }}</div>
+          <div class="result-sub">ca</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px 0;color:var(--text-muted);">
+      <i data-feather="inbox" style="width:32px;height:32px;display:block;margin:0 auto 8px;"></i>
+      <p>Chưa có dữ liệu</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">Drift độ tin cậy theo ngày</span>
+      <a href="/dashboard/drift-export?drift_days={{ drift_days_param }}&drift_top_n={{ drift_top_n_param }}"
+         class="btn btn-sm btn-outline">
+        <i data-feather="download"></i> Export CSV
+      </a>
+    </div>
+    {% if drift_series and drift_series|length > 0 %}
+    <div class="chart-wrapper"><canvas id="driftChart"></canvas></div>
+    {% else %}
+    <div style="text-align:center;padding:32px 0;color:var(--text-muted);">
+      <p>Chưa đủ dữ liệu drift</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Hidden data elements -->
+<div id="uploadData" data-labels='{{ chart_labels|tojson }}' data-values='{{ chart_values|tojson }}' style="display:none;"></div>
+<div id="topData" data-diseases='{{ top_diseases|tojson }}' style="display:none;"></div>
+<div id="driftData" data-labels='{{ drift_labels|tojson }}' data-series='{{ drift_series|tojson }}' style="display:none;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const C = { P:'#22c55e', W:'#f59e0b', D:'#ef4444', I:'#38bdf8', T:'#94a3b8', G:'rgba(255,255,255,.05)' };
+const baseOpts = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ labels:{ color:C.T, boxWidth:12 } } },
+  scales:{
+    x:{ grid:{ color:C.G }, ticks:{ color:C.T } },
+    y:{ grid:{ color:C.G }, ticks:{ color:C.T }, beginAtZero:true }
+  }
+};
+
+// Upload line chart
+(function(){
+  const el = document.getElementById('uploadData');
+  const labels = JSON.parse(el.dataset.labels||'[]');
+  const values = JSON.parse(el.dataset.values||'[]');
+  const ctx = document.getElementById('uploadChart').getContext('2d');
+  const g = ctx.createLinearGradient(0,0,0,280);
+  g.addColorStop(0,'rgba(34,197,94,.4)'); g.addColorStop(1,'rgba(34,197,94,.02)');
+  new Chart(ctx,{
+    type:'line',
+    data:{ labels, datasets:[{
+      label:'Số lần phân tích', data:values,
+      borderColor:C.P, backgroundColor:g, fill:true, tension:.4,
+      borderWidth:2, pointBackgroundColor:C.P, pointRadius:4
+    }]},
+    options:baseOpts
+  });
+})();
+
+// Confidence bar chart
+(function(){
+  const el = document.getElementById('topData');
+  const diseases = JSON.parse(el.dataset.diseases||'[]');
+  if(!diseases.length) return;
+  const ctx = document.getElementById('confidenceChart').getContext('2d');
+  const palette = [C.P,C.W,C.I,C.D,'#a855f7','#ec4899'];
+  new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:diseases.map(d=>d.disease),
+      datasets:[{
+        label:'Số ca', data:diseases.map(d=>d.count),
+        backgroundColor:diseases.map((_,i)=>palette[i%palette.length]),
+        borderRadius:6, borderSkipped:false
+      }]
     },
-    options: {
-        responsive:true, maintainAspectRatio:false,
-        interaction:{mode:'index',intersect:false},
-        plugins:{
-            legend:{labels:{color: getComputedStyle(document.body).getPropertyValue('--color-text')} },
-            tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleFont:{size:14},bodyFont:{size:12},cornerRadius:4,caretSize:6},
-            zoom:{pan:{enabled:true,mode:'x'},zoom:{wheel:{enabled:true},mode:'x'}}
-        },
-        scales:{
-            x:{grid:{color: 'rgba(255,255,255,0.05)'}, ticks:{color: getComputedStyle(document.body).getPropertyValue('--color-text')}},
-            y:{beginAtZero:true,grid:{color: 'rgba(255,255,255,0.05)'}, ticks:{color: getComputedStyle(document.body).getPropertyValue('--color-text')}}
-        }
-    }
-});
+    options:{ ...baseOpts, plugins:{ legend:{ display:false } } }
+  });
+})();
+
+// Drift chart
+(function(){
+  const canvas = document.getElementById('driftChart');
+  if(!canvas) return;
+  const el = document.getElementById('driftData');
+  const labels = JSON.parse(el.dataset.labels||'[]');
+  const series = JSON.parse(el.dataset.series||'[]');
+  if(!series.length) return;
+  const palette = [C.P,C.W,C.I,C.D,'#a855f7','#ec4899'];
+  new Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{
+      labels,
+      datasets:series.map((s,i)=>({
+        label:`${s.disease} (${s.vn})`, data:s.values,
+        borderColor:palette[i%palette.length], backgroundColor:'transparent',
+        borderWidth:2, tension:.4, pointRadius:3, spanGaps:true
+      }))
+    },
+    options:baseOpts
+  });
+})();
+
+feather.replace({ 'stroke-width':1.5, width:16, height:16 });
 </script>
 {% endblock %}

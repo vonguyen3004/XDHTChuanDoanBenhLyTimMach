@@ -6,26 +6,157 @@
   </div>
   <div class="card-body p-4">
   <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data" class="row g-3">
+            <input type="hidden" name="upload_mode" id="uploadModeInput" value="csv">
+
+            <div class="col-12">
+                <div class="card border-secondary">
+                    <div class="card-body">
+                        <h5 class="mb-3 text-uppercase">Thông tin bệnh nhân</h5>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="patientIdInput">Mã bệnh nhân</label>
+                                <input id="patientIdInput" class="form-control" type="text" name="patient_id" placeholder="VD: BN001" required value="{{ next_patient_id }}">
+                                <div class="small text-muted mt-1">Mã BN gần nhất: <strong>{{ last_patient_id if last_patient_id is defined else 'Chưa có' }}</strong></div>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label" for="patientNameInput">Họ và tên</label>
+                                <input id="patientNameInput" class="form-control" type="text" name="patient_name" placeholder="Nguyễn Văn A" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="patientGenderInput">Giới tính</label>
+                                <select id="patientGenderInput" class="form-select" name="patient_gender" required>
+                                    <option value="">Chọn</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="patientAgeInput">Tuổi</label>
+                                <input id="patientAgeInput" class="form-control" type="number" name="patient_age" min="1" max="130" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="patientPhoneInput">Số điện thoại</label>
+                                <input id="patientPhoneInput" class="form-control" type="text" name="patient_phone" placeholder="090xxxxxxx">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="patientAddressInput">Địa chỉ</label>
+                                <input id="patientAddressInput" class="form-control" type="text" name="patient_address" placeholder="Cần Thơ">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="patientNotesInput">Triệu chứng / ghi chú</label>
+                                <textarea id="patientNotesInput" class="form-control" rows="2" name="patient_notes" placeholder="Đau ngực, khó thở..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label text-uppercase">Chế độ upload</label>
+                <div class="d-flex gap-3 flex-wrap">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="upload_mode_ui" id="modeCsv" value="csv" checked>
+                        <label class="form-check-label" for="modeCsv">CSV (timesteps x 12 leads)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="upload_mode_ui" id="modeWfdb" value="wfdb">
+                        <label class="form-check-label" for="modeWfdb">WFDB (.hea + .dat)</label>
+                    </div>
+                </div>
+            </div>
+
       <div class="col-12">
-        <label class="form-label text-uppercase" for="fileInput">Kéo thả file hoặc nhấp để chọn (CSV)</label>
+                <label class="form-label text-uppercase" for="fileInput">Kéo thả file hoặc nhấp để chọn (CSV)</label>
         <div id="dropZone" class="border border-secondary rounded p-4 text-center position-relative" style="cursor:pointer;">
             <i data-feather="file-text" style="color: var(--color-primary);"></i>
             <p id="dropText" class="text-uppercase mt-2" style="color: var(--color-text);">Kéo tập tin CSV vào đây</p>
-            <!-- full‑size transparent input covers zone; click anywhere opens dialog -->
             <input id="fileInput" class="form-control" type="file" name="file" accept=".csv"
                    style="opacity:0; position:absolute; left:0; top:0; width:100%; height:100%; cursor:pointer;">
         </div>
       </div>
+
+            <div class="col-12" id="wfdbSection" style="display:none;">
+                <div class="card border-secondary">
+                    <div class="card-body">
+                        <label class="form-label text-uppercase">Upload cặp WFDB</label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input id="heaFileInput" class="form-control" type="file" name="hea_file" accept=".hea">
+                                <div class="small text-muted mt-1">File header .hea</div>
+                            </div>
+                            <div class="col-md-6">
+                                <input id="datFileInput" class="form-control" type="file" name="dat_file" accept=".dat">
+                                <div class="small text-muted mt-1">File signal .dat</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <label class="form-label text-uppercase" for="thresholdInput">Ngưỡng chung</label>
+                <input id="thresholdInput" class="form-range" type="range" name="threshold" min="0.1" max="0.9" step="0.05" value="0.5">
+                <div class="small text-muted">Threshold hiện tại: <span id="thresholdValue">0.50</span></div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <label class="form-label text-uppercase" for="thresholdMapInput">Threshold map (JSON, tùy chọn)</label>
+                <textarea id="thresholdMapInput" class="form-control" name="threshold_map" rows="3" placeholder='{"PAC":0.35,"PMI":0.35,"NORM":0.6}'>{{ threshold_defaults_json if threshold_defaults_json is defined else '' }}</textarea>
+            </div>
+
       <div class="col-12">
-        <button id="submitBtn" class="btn btn-primary btn-lg mt-2 text-uppercase" type="submit"><i data-feather="upload"></i> Gửi</button>
+                <button id="previewBtn" class="btn btn-outline-primary btn-lg mt-2 text-uppercase me-2" type="button"><i data-feather="cpu"></i> Xem trước AI</button>
+                <button id="submitBtn" class="btn btn-primary btn-lg mt-2 text-uppercase" type="submit"><i data-feather="upload"></i> Gửi</button>
       </div>
+
+            <div class="col-12">
+                <div id="previewBox" class="card mt-3" style="display:none;">
+                    <div class="card-body">
+                        <h5 class="mb-2 text-uppercase">Kết quả AI xem trước</h5>
+                        <div id="previewMeta" class="small text-muted mb-2"></div>
+                        <ul id="previewList" class="mb-0"></ul>
+                        <div id="previewError" class="text-danger small mt-2" style="display:none;"></div>
+                    </div>
+                </div>
+            </div>
   </form>
 </div>
 <script>
+const form = document.getElementById('uploadForm');
+const modeCsv = document.getElementById('modeCsv');
+const modeWfdb = document.getElementById('modeWfdb');
+const uploadModeInput = document.getElementById('uploadModeInput');
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
+const heaFileInput = document.getElementById('heaFileInput');
+const datFileInput = document.getElementById('datFileInput');
+const wfdbSection = document.getElementById('wfdbSection');
 const dropText = document.getElementById('dropText');
+const thresholdInput = document.getElementById('thresholdInput');
+const thresholdValue = document.getElementById('thresholdValue');
+const thresholdMapInput = document.getElementById('thresholdMapInput');
 const submitBtn = document.getElementById('submitBtn');
+const previewBtn = document.getElementById('previewBtn');
+const previewBox = document.getElementById('previewBox');
+const previewMeta = document.getElementById('previewMeta');
+const previewList = document.getElementById('previewList');
+const previewError = document.getElementById('previewError');
+
+function isCsvMode() {
+        return uploadModeInput.value === 'csv';
+}
+
+function refreshModeUI() {
+        const csvMode = modeCsv.checked;
+        uploadModeInput.value = csvMode ? 'csv' : 'wfdb';
+        dropZone.style.display = csvMode ? 'block' : 'none';
+        wfdbSection.style.display = csvMode ? 'none' : 'block';
+        previewBox.style.display = 'none';
+}
+
+modeCsv.addEventListener('change', refreshModeUI);
+modeWfdb.addEventListener('change', refreshModeUI);
+refreshModeUI();
 
 ['dragover','dragenter'].forEach(evt=>{
     dropZone.addEventListener(evt,e=>{
@@ -44,8 +175,13 @@ const submitBtn = document.getElementById('submitBtn');
 dropZone.addEventListener('drop', e=>{
     const files = e.dataTransfer.files;
     if(files.length) {
-        fileInput.files = files;
-        dropText.textContent = files[0].name;
+        const picked = Array.from(files).find(f => f.name.toLowerCase().endsWith('.csv'));
+        if (picked) {
+            const dt = new DataTransfer();
+            dt.items.add(picked);
+            fileInput.files = dt.files;
+            dropText.textContent = picked.name;
+        }
     }
 });
 
@@ -53,19 +189,119 @@ dropZone.addEventListener('drop', e=>{
 fileInput.addEventListener('change', ()=>{
     if(fileInput.files.length) {
         dropText.textContent = fileInput.files[0].name;
+        previewBox.style.display = 'none';
     }
 });
 
+thresholdInput.addEventListener('input', ()=>{
+    thresholdValue.textContent = Number(thresholdInput.value).toFixed(2);
+});
+
+function getThresholdMapText() {
+    return (thresholdMapInput.value || '').trim();
+}
+
+function appendThresholdFields(fd) {
+    fd.append('threshold', thresholdInput.value);
+    const thresholdMapText = getThresholdMapText();
+    if (thresholdMapText) {
+        try {
+            JSON.parse(thresholdMapText);
+            fd.append('threshold_map', thresholdMapText);
+        } catch (err) {
+            throw new Error('threshold_map không phải JSON hợp lệ.');
+        }
+    }
+}
+
+async function previewAI() {
+    const csvMode = isCsvMode();
+    if(csvMode && !fileInput.files.length) {
+        alert('Vui lòng chọn tệp CSV trước khi xem trước AI.');
+        return;
+    }
+    if(!csvMode && (!heaFileInput.files.length || !datFileInput.files.length)) {
+        alert('Vui lòng chọn đủ 2 tệp .hea và .dat trước khi xem trước AI.');
+        return;
+    }
+
+    previewBtn.disabled = true;
+    previewError.style.display = 'none';
+    previewError.textContent = '';
+    previewMeta.textContent = 'Đang chạy suy luận...';
+    previewList.innerHTML = '';
+    previewBox.style.display = 'block';
+
+    try {
+        const fd = new FormData();
+        if (csvMode) {
+            fd.append('file', fileInput.files[0]);
+        } else {
+            fd.append('hea_file', heaFileInput.files[0]);
+            fd.append('dat_file', datFileInput.files[0]);
+        }
+        appendThresholdFields(fd);
+
+        const resp = await fetch('/api/predict-upload', {
+            method: 'POST',
+            body: fd
+        });
+        const data = await resp.json();
+
+        if(!resp.ok) {
+            throw new Error(data.error || 'Không thể suy luận AI.');
+        }
+
+        const preds = data.multi_label_predictions || [];
+        previewMeta.textContent = `Model: ${data.model_type || 'cnn_ptbxl_20'} | Số nhãn dự đoán: ${preds.length}`;
+
+        if(!preds.length) {
+            previewList.innerHTML = '<li>Không có bệnh nào vượt ngưỡng hiện tại.</li>';
+            return;
+        }
+
+        const top = preds.slice(0, 5);
+        previewList.innerHTML = top.map(p => {
+            const conf = (Number(p.confidence || 0) * 100).toFixed(1);
+            return `<li><strong>${p.disease}</strong> - ${conf}%</li>`;
+        }).join('');
+    } catch (err) {
+        previewMeta.textContent = 'Xem trước thất bại';
+        previewError.textContent = err.message || String(err);
+        previewError.style.display = 'block';
+    } finally {
+        previewBtn.disabled = false;
+    }
+}
+
+previewBtn.addEventListener('click', previewAI);
+
 // prevent submission when no file selected and disable button on submit
-const form = document.getElementById('uploadForm');
 form.addEventListener('submit', e=>{
-    if(!fileInput.files.length) {
+    const csvMode = isCsvMode();
+    if(csvMode && !fileInput.files.length) {
         e.preventDefault();
         alert('Vui lòng chọn tệp CSV trước khi gửi.');
         return;
     }
+    if(!csvMode && (!heaFileInput.files.length || !datFileInput.files.length)) {
+        e.preventDefault();
+        alert('Vui lòng chọn đủ 2 tệp .hea và .dat trước khi gửi.');
+        return;
+    }
+    if (getThresholdMapText()) {
+        try {
+            JSON.parse(getThresholdMapText());
+        } catch (err) {
+            e.preventDefault();
+            alert('threshold_map không phải JSON hợp lệ.');
+            return;
+        }
+    }
     // disable button to avoid double-click
     submitBtn.disabled = true;
 });
+
+refreshModeUI();
 </script>
 {% endblock %}

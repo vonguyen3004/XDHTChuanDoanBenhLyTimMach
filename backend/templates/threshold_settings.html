@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Cài đặt ngưỡng CNN - ECG AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Cài đặt ngưỡng CNN</h1>
+  <p class="page-subtitle">Tinh chỉnh ngưỡng dự đoán theo từng bệnh cho mô hình đa nhãn</p>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="mb-3">
+      {% for category, msg in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'danger' else 'warning' }}" role="alert">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="card mb-4">
+  <div class="card-header-row">
+    <span class="card-title"><i data-feather="sliders" style="margin-right:8px;"></i>Ngưỡng theo từng bệnh</span>
+  </div>
+
+  <form method="post">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+      {% for disease, val in thresholds.items() %}
+        <div>
+          <label class="form-label" for="th_{{ disease }}">{{ disease }}</label>
+          <input
+            id="th_{{ disease }}"
+            name="th_{{ disease }}"
+            class="form-control"
+            type="number"
+            min="0.05"
+            max="0.95"
+            step="0.01"
+            value="{{ "%0.2f"|format(val) }}"
+          >
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:20px;">
+      <label class="form-label" for="thresholdsJson">Hoặc cập nhật bằng JSON</label>
+      <textarea
+        id="thresholdsJson"
+        name="thresholds_json"
+        rows="4"
+        class="form-control"
+        placeholder='{"PAC":0.35,"PMI":0.30}'
+      ></textarea>
+      <div class="small text-muted mt-1">Nếu có JSON, hệ thống ưu tiên đọc JSON thay vì các ô bên trên.</div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
+      <button class="btn btn-primary" type="submit">
+        <i data-feather="save"></i> Lưu ngưỡng
+      </button>
+      <a href="/dashboard" class="btn btn-outline-secondary">
+        <i data-feather="arrow-left"></i> Quay lại Dashboard
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

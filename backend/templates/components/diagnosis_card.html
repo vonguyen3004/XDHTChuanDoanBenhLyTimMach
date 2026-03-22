@@ -1,0 +1,71 @@
+{% macro render(label, detail, vn_name='', en_name='', severity_class='severity-soft', print_mode=False, show_header=True) -%}
+{% if label %}
+<div class="xai-diagnosis-card">
+  {% if show_header %}
+  <div class="xai-diagnosis-head">
+    <div class="xai-diagnosis-title">{{ label }}{% if vn_name %} - {{ vn_name|upper }}{% endif %}</div>
+    {% if en_name or vn_name %}
+      <div class="xai-diagnosis-subtitle">{{ en_name or 'ECG diagnosis' }}{% if vn_name %} - {{ vn_name|lower }}{% endif %}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if detail %}
+  <div class="xai-card-body">
+  <div class="xai-severity-row severity-row severity-header">
+    <span class="xai-severity-label severity-title title">MỨC ĐỘ NGUY HIỂM</span>
+    <span class="severity-badge badge {{ severity_class }}">{{ detail.severity }}</span>
+  </div>
+  <div class="xai-section-divider divider"></div>
+
+  {% if print_mode %}
+  <div class="xai-print-summary">
+    <div><strong>Chẩn đoán:</strong> {{ label }}</div>
+    <div><strong>Tên bệnh:</strong> {{ vn_name or label }}</div>
+    <div><strong>Mức độ nguy hiểm:</strong> {{ detail.severity }}</div>
+    <div><strong>Mô tả:</strong> {{ detail.description }}</div>
+    <div><strong>Dấu hiệu ECG:</strong> {{ detail.ecgSigns }}</div>
+    <div><strong>Khuyến nghị:</strong> {{ detail.recommendation }}</div>
+  </div>
+  {% endif %}
+
+  <div class="xai-section section section-block">
+    <div class="xai-section-title section-title info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      </svg>
+      MÔ TẢ BỆNH LÝ
+    </div>
+    <div class="xai-section-content section-box content-box description-box info-box">{{ detail.description }}</div>
+  </div>
+
+  <div class="xai-section section section-block">
+    <div class="xai-section-title section-title ecg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+      </svg>
+      DẤU HIỆU TRÊN ECG
+    </div>
+    <div class="xai-section-content section-box content-box ecg-box">{{ detail.ecgSigns }}</div>
+  </div>
+
+  </div>
+
+  <div class="xai-card-footer">
+  <div class="xai-section section section-block">
+    <div class="xai-section-title section-title is-positive recommend">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      KHUYẾN NGHỊ
+    </div>
+    <div class="xai-recommendation section-box content-box recommendation-box recommend-box">{{ detail.recommendation }}</div>
+  </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{%- endmacro %}

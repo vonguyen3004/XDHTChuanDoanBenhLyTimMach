@@ -43,18 +43,31 @@ def train(csv_path=None):
     clf.fit(X_train, y_train)
     acc = clf.score(X_test, y_test)
     print(f"Test accuracy: {acc:.4f}")
-    # save model into backend folder; compute path relative to this script file
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+    # save model into ml/randomForestClassifier folder; compute path relative to this script file
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'randomForestClassifier'))
     os.makedirs(base_dir, exist_ok=True)
-    output_path = os.path.join(base_dir, 'model.joblib')
+    output_path = os.path.join(base_dir, 'RandomForestClassifier_model.joblib')
     joblib.dump(clf, output_path)
 
 
 if __name__ == '__main__':
     import argparse
+    import os
 
     parser = argparse.ArgumentParser(description='Train ECG classification model')
     parser.add_argument('csv', nargs='?',
+                        default='data/ECG_Diagnosis_System/mitbih_train.csv',
                         help='path to CSV dataset (rows: samples, last column=label)')
     args = parser.parse_args()
-    train(args.csv)
+
+    # If this script is run from outside repo root, resolve relative to repo root
+    csv_path = args.csv
+    if not os.path.isabs(csv_path):
+        cwd = os.path.abspath(os.getcwd())
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        if not os.path.exists(csv_path):
+            candidate = os.path.join(repo_root, csv_path)
+            if os.path.exists(candidate):
+                csv_path = candidate
+
+    train(csv_path)

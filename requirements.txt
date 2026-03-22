@@ -1,0 +1,8 @@
+Flask
+scikit-learn
+numpy
+pandas
+pymongo
+matplotlib
+tensorflow
+wfdb

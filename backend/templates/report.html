@@ -1,0 +1,1074 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo - ECG AI{% endblock %}
+
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+.report-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.report-info-card {
+  min-height: 78px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.02);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.report-info-card .meta-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.report-info-card .meta-value {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.35;
+  font-weight: 700;
+}
+.report-info-card .meta-value.small {
+  font-size: 15px;
+}
+.report-info-card .meta-value.mono {
+  font-family: 'Cambria', 'Georgia', serif;
+  color: var(--info);
+}
+.report-info-card .meta-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  word-break: break-all;
+}
+.report-info-card.is-primary {
+  border-color: var(--primary);
+  background: rgba(34,197,94,.06);
+}
+.report-info-card.is-primary .meta-value {
+  color: var(--primary);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.report-patient-card {
+  margin-bottom: 14px;
+  padding: 12px;
+  background: rgba(30,41,59,.58);
+  border-radius: 16px;
+  border: 1px solid rgba(100,116,139,.45);
+  box-shadow: 0 10px 22px rgba(2,6,23,.28);
+}
+.report-patient-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.report-patient-title {
+  margin-bottom: 0;
+  color: #f1f5f9;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.report-patient-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(34,197,94,.45);
+  background: rgba(34,197,94,.12);
+  color: #86efac;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.report-patient-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas:
+    "id name age"
+    "gender phone address"
+    "notes notes notes";
+  gap: 10px;
+}
+.report-patient-item {
+  background: rgba(15,23,42,.55);
+  border: 1px solid rgba(148,163,184,.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.report-patient-item .label {
+  display: block;
+  color: #7dd3fc;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 6px;
+}
+.report-patient-item .value {
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ai-pred-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-pred-card {
+  border-radius: 14px;
+  border: 1px solid rgba(100, 116, 139, 0.45);
+  background: linear-gradient(180deg, rgba(51, 65, 85, 0.72), rgba(30, 41, 59, 0.82));
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.32);
+  padding: 16px 16px;
+  min-height: 98px;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+}
+
+.ai-pred-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(52, 211, 153, 0.62);
+  background: linear-gradient(180deg, rgba(51, 65, 85, 0.8), rgba(30, 41, 59, 0.88));
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.4);
+}
+
+.ai-pred-card.top {
+  border-color: rgba(34, 197, 94, 0.95);
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.14), rgba(30, 41, 59, 0.88));
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.38), 0 0 22px rgba(34, 197, 94, 0.24), 0 14px 30px rgba(2, 6, 23, 0.42);
+}
+
+.ai-pred-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ai-pred-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.ai-pred-icon-wrap {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 30% 30%, rgba(52, 211, 153, 0.35), rgba(16, 185, 129, 0.18));
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.2);
+  flex-shrink: 0;
+}
+
+.ai-pred-icon {
+  width: 12px;
+  height: 12px;
+  color: #86efac;
+}
+
+.ai-pred-abbr {
+  color: #86efac;
+  letter-spacing: .04em;
+  font-size: .95rem;
+  font-weight: 700;
+}
+
+.ai-pred-sep {
+  color: #94a3b8;
+  font-size: .95rem;
+  font-weight: 600;
+}
+
+.ai-pred-desc {
+  color: #67e8f9;
+  font-size: 1.06rem;
+  font-weight: 800;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  min-width: 0;
+}
+
+.ai-pred-percent {
+  color: #22c55e;
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: .02em;
+  min-width: 70px;
+  text-align: right;
+}
+
+.ai-pred-top-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.58);
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.2), rgba(74, 222, 128, 0.1));
+  color: #bbf7d0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-pred-progress-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-pred-progress-track {
+  position: relative;
+  flex: 0 1 88%;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.38), rgba(148, 163, 184, 0.2));
+  box-shadow: inset 0 1px 2px rgba(2, 6, 23, 0.45);
+}
+
+.ai-pred-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e 0%, #4ade80 45%, #86efac 100%);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.45);
+  animation: aiPredGrow .95s cubic-bezier(.2,.7,.2,1) forwards;
+}
+
+.ai-pred-progress-fill.top {
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 45%, #bbf7d0 100%);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.65);
+}
+
+/* Dedicated print-friendly PDF sheet (rendered offscreen) */
+.pdf-render-root {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  z-index: -1;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.pdf-sheet {
+  width: 794px;
+  height: 1123px;
+  background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+  color: #e2e8f0;
+  font-family: Cambria, Georgia, 'Times New Roman', serif;
+  padding: 34px 36px 28px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.pdf-head {
+  border-bottom: 2px solid rgba(34, 197, 94, 0.55);
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+}
+
+.pdf-kicker {
+  font-size: 12px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.pdf-title {
+  margin: 0;
+  font-size: 27px;
+  line-height: 1.2;
+  color: #f8fafc;
+  text-transform: uppercase;
+}
+
+.pdf-sub {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #93c5fd;
+}
+
+.pdf-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.pdf-card {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.pdf-label {
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.pdf-value {
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.pdf-value.big {
+  font-size: 26px;
+  color: #22c55e;
+}
+
+.pdf-section-title {
+  margin: 16px 0 10px;
+  font-size: 14px;
+  letter-spacing: .9px;
+  color: #86efac;
+  text-transform: uppercase;
+}
+
+.pdf-patient-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pdf-patient-grid .pdf-card.wide {
+  grid-column: 1 / -1;
+}
+
+.pdf-result-box {
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  background: linear-gradient(180deg, rgba(22, 101, 52, 0.28), rgba(15, 23, 42, 0.75));
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.pdf-result-main {
+  color: #bbf7d0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.pdf-result-sub {
+  margin-top: 5px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.pdf-pred-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pdf-pred-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 66px;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdf-pred-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #bae6fd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdf-pred-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.3);
+  overflow: hidden;
+}
+
+.pdf-pred-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e 0%, #4ade80 65%, #bbf7d0 100%);
+}
+
+.pdf-pred-pct {
+  text-align: right;
+  color: #86efac;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.pdf-note {
+  margin-top: 16px;
+  border-left: 3px solid #f59e0b;
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.pdf-note-title {
+  color: #fbbf24;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.pdf-note-text {
+  color: #e2e8f0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pdf-footer {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+@keyframes aiPredGrow {
+  from { width: 0; opacity: .65; }
+  to { width: var(--target, 0%); opacity: 1; }
+}
+
+@media (max-width: 992px) {
+  .report-info-card.is-primary .meta-value {
+    font-size: 24px;
+  }
+
+  .ai-pred-percent {
+    font-size: 1.35rem;
+    min-width: 66px;
+  }
+}
+@media (max-width: 768px) {
+  .report-info-grid {
+    grid-template-columns: 1fr;
+  }
+  .report-patient-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .report-patient-grid {
+    grid-template-columns: 1fr;
+  }
+  .report-patient-item.span-2 {
+    grid-column: 1;
+  }
+  .report-patient-item.full {
+    grid-area: notes;
+    width: 100%;
+    min-width: 0;
+    word-break: break-word;
+    white-space: pre-line;
+    min-height: 60px;
+    padding: 16px 14px;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+
+  .ai-pred-head {
+    align-items: flex-start;
+  }
+
+  .ai-pred-name {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .ai-pred-desc {
+    white-space: normal;
+  }
+
+  .ai-pred-progress-track {
+    flex: 1;
+  }
+
+  .ai-pred-percent {
+    font-size: 1.3rem;
+    min-width: 60px;
+  }
+}
+@media print {
+  body, html {
+    background: #0b1220 !important;
+    color: #e2e8f0 !important;
+  }
+  .pdf-sheet, .main-container {
+    background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%) !important;
+    color: #e2e8f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .pdf-card, .report-info-card, .report-patient-card, .ai-pred-card, .pdf-note {
+    background: rgba(15,23,42,0.7) !important;
+    color: #e2e8f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Báo cáo Phân tích ECG</h1>
+  <p class="page-subtitle">Xuất báo cáo PDF kết quả chẩn đoán điện tâm đồ</p>
+</div>
+
+<div class="grid-2">
+  <!-- Select record -->
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">Chọn bản ghi xuất báo cáo</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ID Phân tích</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="reportId" class="form-control" placeholder="Nhập ID...">
+        <button class="btn btn-outline" onclick="loadRecord(document.getElementById('reportId').value)">
+          <i data-feather="search"></i>
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <label class="form-label">Kết quả phân tích gần đây</label>
+      <div style="max-height:350px;overflow-y:auto;">
+        {% if recent_ecgs %}
+          {% for ecg in recent_ecgs %}
+          <div class="result-item" style="cursor:pointer;"
+               onclick="document.getElementById('reportId').value='{{ ecg._id|string }}';loadRecord('{{ ecg._id|string }}')">
+            <div>
+              <div class="result-name" style="font-size:13px;">{{ ecg.get('name','--')|truncate(30,True,'...') }}</div>
+              <div class="result-sub">{{ ecg['timestamp']|datetimeformat }}</div>
+            </div>
+            <div>
+              {% if ecg.get('multi_label_predictions') %}
+              <span class="badge badge-green">{{ ecg['multi_label_predictions'][0].disease }}</span>
+              {% elif ecg.get('prediction_label') %}
+              <span class="badge badge-yellow">{{ ecg['prediction_label'] }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div style="text-align:center;padding:24px;color:var(--text-muted);">Chưa có bản ghi nào.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Report preview + export -->
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">Xem trước báo cáo</span>
+      <span id="loadSpinner" class="spinner" style="display:none;"></span>
+    </div>
+
+    <!-- Placeholder -->
+    <div id="rptPlaceholder" style="text-align:center;padding:60px 0;color:var(--text-muted);">
+      <i data-feather="file-text" style="width:40px;height:40px;display:block;margin:0 auto 12px;opacity:.4;"></i>
+      <p>Chọn bản ghi để xem trước báo cáo</p>
+    </div>
+
+    <!-- Content -->
+    <div id="rptContent" style="display:none;">
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:14px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-bottom:4px;">
+          Hệ thống AI Chẩn đoán Điện tâm đồ
+        </div>
+        <div style="font-size:18px;font-weight:700;color:var(--text);text-transform:uppercase;">
+          Báo cáo Phân tích ECG
+        </div>
+        <div style="width:60px;height:3px;background:var(--primary);margin:10px auto;"></div>
+      </div>
+
+      <!-- Info grid -->
+      <div class="report-info-grid">
+        <div class="report-info-card">
+          <div class="meta-label">ID</div>
+          <div id="rptId" class="meta-value small mono"></div>
+          <div id="rptIdFull" class="meta-sub"></div>
+        </div>
+        <div class="report-info-card">
+          <div class="meta-label">Tên file</div>
+          <div id="rptName" class="meta-value small"></div>
+        </div>
+        <div class="report-info-card">
+          <div class="meta-label">Thời gian</div>
+          <div id="rptTime" class="meta-value small"></div>
+        </div>
+        <div class="report-info-card is-primary">
+          <div class="meta-label">Nhịp tim</div>
+          <div id="rptHR" class="meta-value"></div>
+        </div>
+      </div>
+
+      <div class="report-patient-card">
+        <div class="report-patient-head">
+          <div class="card-title report-patient-title">Thông tin bệnh nhân</div>
+          <div class="report-patient-chip" id="rptPatientChip">--</div>
+        </div>
+        <div class="report-patient-grid">
+          <div class="report-patient-item" style="grid-area: id;">
+            <span class="label">Mã bệnh nhân</span>
+            <span class="value" id="rptPatientId">--</span>
+          </div>
+          <div class="report-patient-item" style="grid-area: name;">
+            <span class="label">Họ tên</span>
+            <span class="value" id="rptPatientNameFull">--</span>
+          </div>
+          <div class="report-patient-item" style="grid-area: age;">
+            <span class="label">Tuổi</span>
+            <span class="value" id="rptPatientAge">--</span>
+          </div>
+          <div class="report-patient-item" style="grid-area: gender;">
+            <span class="label">Giới tính</span>
+            <span class="value" id="rptPatientGender">--</span>
+          </div>
+          <div class="report-patient-item" style="grid-area: phone;">
+            <span class="label">Số điện thoại</span>
+            <span class="value" id="rptPatientPhone">--</span>
+          </div>
+          <div class="report-patient-item" style="grid-area: address;">
+            <span class="label">Địa chỉ</span>
+            <span class="value" id="rptPatientAddress">--</span>
+          </div>
+          <div class="report-patient-item full" style="grid-area: notes;">
+            <span class="label">Triệu chứng</span>
+            <span class="value" id="rptPatientNotes">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Predictions -->
+      <div style="margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:8px;">Kết quả dự đoán AI</div>
+        <div id="rptPreds"></div>
+      </div>
+
+      <!-- Probability chart -->
+      <div style="margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:8px;">Xác suất từng bệnh (%)</div>
+        <div style="height:160px;"><canvas id="rptProbChart"></canvas></div>
+      </div>
+
+      <!-- ECG -->
+      <div style="margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:8px;">Tín hiệu ECG (Lead II)</div>
+        <canvas id="rptEcgChart" height="80"
+                style="width:100%;background:#0a1628;border-radius:8px;display:block;"></canvas>
+      </div>
+
+      <!-- Recommendation -->
+      <div id="rptRec" style="padding:12px;background:rgba(245,158,11,.06);border-radius:8px;
+                              border-left:3px solid var(--warning);display:none;">
+        <div style="font-size:14px;color:var(--warning);font-weight:700;text-transform:uppercase;margin-bottom:8px;">
+          &#9888; Khuyến nghị
+        </div>
+        <div id="rptRecText" style="font-size:16px;color:var(--text-muted);line-height:1.7;"></div>
+      </div>
+    </div>
+
+    <!-- Export buttons -->
+    <div id="reportActions" style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+      <button class="btn btn-primary" id="pdfBtn" onclick="exportPDF()" disabled>
+        <i data-feather="download"></i> Xuất báo cáo PDF
+      </button>
+      <button class="btn btn-outline" id="printBtn" onclick="printRpt()" disabled>
+        <i data-feather="printer"></i> In báo cáo
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="vnData" data-vn='{{ disease_vn|tojson if disease_vn is defined else "{}" }}' style="display:none;"></div>
+<div id="pdfRenderRoot" class="pdf-render-root" aria-hidden="true"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const VN_MAP = JSON.parse(document.getElementById('vnData').dataset.vn||'{}');
+let currentData = null;
+let rptProb = null, rptEcg = null;
+
+function shortAnalysisId(id) {
+  const raw = String(id || '').trim();
+  if(!raw) return '--';
+  if(raw.length <= 6) return `ECG-${raw}`;
+  return `ECG-${raw.slice(-6)}`;
+}
+
+function isNormalPrediction(prediction) {
+  const disease = String(prediction?.disease || '').trim().toLowerCase();
+  const diseaseVn = String(prediction?.disease_vn || VN_MAP[prediction?.disease] || '').trim().toLowerCase();
+  return disease === 'norm' || disease === 'normal' || diseaseVn.includes('bình thường');
+}
+
+async function loadRecord(id) {
+  id = id.trim();
+  if(!id) return;
+  document.getElementById('loadSpinner').style.display='inline-block';
+  try {
+    const res = await fetch('/api/ecg-detail/'+encodeURIComponent(id));
+    if(!res.ok) throw new Error(await res.text());
+    currentData = await res.json();
+    renderReport(currentData);
+  } catch(e) {
+    alert('Lỗi: '+e.message);
+  } finally {
+    document.getElementById('loadSpinner').style.display='none';
+  }
+}
+
+function renderReport(d) {
+  document.getElementById('rptPlaceholder').style.display='none';
+  document.getElementById('rptContent').style.display='block';
+  document.getElementById('reportActions').style.justifyContent='flex-start';
+  document.getElementById('pdfBtn').disabled=false;
+  document.getElementById('printBtn').disabled=false;
+
+  document.getElementById('rptId').textContent   = shortAnalysisId(d._id);
+  document.getElementById('rptIdFull').textContent = d._id || '--';
+  document.getElementById('rptTime').textContent = d.timestamp_vn||d.timestamp||'--';
+  document.getElementById('rptName').textContent = d.name||'--';
+  const p = d.patient || {};
+  const pId = p.patient_id || d.patient_id || '--';
+  const pName = p.name || d.patient_name || '--';
+  const pAge = (p.age ?? d.patient_age ?? '--');
+  const pGender = p.gender || d.patient_gender || '--';
+  const pPhone = p.phone || d.phone || '--';
+  const pAddress = p.address || d.address || '--';
+  const pNotes = p.notes || d.notes || '--';
+  document.getElementById('rptPatientId').textContent = pId;
+  document.getElementById('rptPatientNameFull').textContent = pName;
+  document.getElementById('rptPatientAge').textContent = pAge;
+  document.getElementById('rptPatientGender').textContent = pGender;
+  document.getElementById('rptPatientChip').textContent = `${pGender} · ${pAge} tuổi`;
+  document.getElementById('rptPatientPhone').textContent = pPhone;
+  document.getElementById('rptPatientAddress').textContent = pAddress;
+  document.getElementById('rptPatientNotes').textContent = pNotes;
+  document.getElementById('rptHR').textContent   = d.heart_rate ? Math.round(d.heart_rate)+' BPM' : '--';
+
+  const preds = d.multi_label_predictions||[];
+  const predsEl = document.getElementById('rptPreds');
+  if(preds.length){
+    const sortedPreds = [...preds].sort((a,b) => Number(b.confidence || 0) - Number(a.confidence || 0));
+    predsEl.className = 'ai-pred-grid';
+    predsEl.innerHTML = sortedPreds.slice(0,6).map((p, index)=>{
+      const pct = (p.confidence*100).toFixed(1);
+      const isTop = index === 0;
+      const barGradient = isTop
+        ? 'linear-gradient(90deg,#16a34a 0%,#22c55e 48%,#bbf7d0 100%)'
+        : 'linear-gradient(90deg,#22c55e 0%,#4ade80 45%,#86efac 100%)';
+      const percentColor = isTop ? '#34d399' : '#22c55e';
+
+      return `
+      <div class="ai-pred-card ${isTop ? 'top' : ''}">
+        <div class="ai-pred-head">
+          <div style="flex:1;min-width:0;">
+            <div class="ai-pred-name">
+              <span class="ai-pred-icon-wrap"><i data-feather="heart" class="ai-pred-icon"></i></span>
+              <div class="ai-pred-abbr">${p.disease}</div>
+              <span class="ai-pred-sep">-</span>
+              <div class="ai-pred-desc">${p.disease_vn||VN_MAP[p.disease]||p.disease}</div>
+              ${isTop ? '<div class="ai-pred-top-badge">✓ Top prediction</div>' : ''}
+            </div>
+          </div>
+        </div>
+        <div class="ai-pred-progress-row">
+          <div class="ai-pred-progress-track">
+            <div class="ai-pred-progress-fill ${isTop ? 'top' : ''}" style="--target:${pct}%;background:${barGradient};"></div>
+          </div>
+          <div class="ai-pred-percent" style="color:${percentColor};">${pct}%</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const topPred = sortedPreds[0];
+    const top = topPred.confidence;
+    const rec = isNormalPrediction(topPred)
+          ? 'Kết quả hiện tại cho thấy điện tâm đồ trong giới hạn bình thường. Bạn nên duy trì lối sống lành mạnh và theo dõi định kỳ theo hướng dẫn của bác sĩ.'
+          : top>.7
+            ? 'Kết quả cho thấy khả năng cao có bệnh lý tim mạch. Vui lòng tham khảo ý kiến bác sĩ chuyên khoa tim mạch sớm để được đánh giá thêm.'
+            : top>.5
+              ? 'Phát hiện một số dấu hiệu bất thường. Nên tiếp tục theo dõi và cân nhắc kiểm tra chuyên sâu nếu có triệu chứng.'
+              : 'Chưa ghi nhận dấu hiệu nguy hiểm rõ rệt, nhưng bạn vẫn nên theo dõi định kỳ nếu có yếu tố nguy cơ hoặc triệu chứng bất thường.';
+    document.getElementById('rptRecText').textContent = rec;
+    document.getElementById('rptRec').style.display = 'block';
+
+    // Prob chart
+    const ctx = document.getElementById('rptProbChart').getContext('2d');
+    if(rptProb) rptProb.destroy();
+    rptProb = new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:preds.slice(0,8).map(p=>p.disease),
+        datasets:[{
+          label:'Xác suất (%)',
+          data:preds.slice(0,8).map(p=>+(p.confidence*100).toFixed(1)),
+          backgroundColor:preds.slice(0,8).map(p=>p.confidence>.7?'rgba(239,68,68,.7)':p.confidence>.5?'rgba(245,158,11,.7)':'rgba(34,197,94,.7)'),
+          borderRadius:3
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8',font:{size:10}}},
+          y:{max:100,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8',callback:v=>v+'%'}}
+        }
+      }
+    });
+  } else {
+    predsEl.className = '';
+    predsEl.innerHTML = '<div style="color:#86efac;font-size:18px;padding:14px 12px;background:rgba(34,197,94,.08);border-radius:8px;">&#10003; Không phát hiện bệnh lý bất thường</div>';
+    document.getElementById('rptRec').style.display = 'none';
+  }
+
+  // ECG chart
+  const sig = d.signal;
+  const c2 = document.getElementById('rptEcgChart');
+  c2.width = c2.parentElement.clientWidth;
+  const ctx2 = c2.getContext('2d');
+  if(rptEcg) rptEcg.destroy();
+  if(sig && sig.length){
+    rptEcg = new Chart(ctx2,{
+      type:'line',
+      data:{
+        labels:sig.slice(0,1000).map((_,i)=>i),
+        datasets:[{data:sig.slice(0,1000),borderColor:'#22c55e',backgroundColor:'transparent',
+                   borderWidth:1.5,pointRadius:0,tension:.2}]
+      },
+      options:{
+        responsive:false, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:{display:false},y:{display:false}},
+        animation:false
+      }
+    });
+  }
+  feather.replace({'stroke-width':1.5,width:16,height:16});
+}
+
+async function exportPDF() {
+  if(!currentData) return;
+  const renderRoot = document.getElementById('pdfRenderRoot');
+  if(!renderRoot) return;
+
+  const pdfBtn = document.getElementById('pdfBtn');
+  const oldLabel = pdfBtn ? pdfBtn.innerHTML : '';
+  if(pdfBtn){
+    pdfBtn.disabled = true;
+    pdfBtn.innerHTML = '<i data-feather="loader"></i> Đang tạo PDF...';
+    feather.replace({'stroke-width':1.5,width:16,height:16});
+  }
+
+  try {
+    renderRoot.innerHTML = buildPdfSheetHTML(currentData);
+    const target = renderRoot.firstElementChild;
+    if(!target) throw new Error('Không dựng được nội dung PDF.');
+
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      backgroundColor: '#0f172a',
+      useCORS: true,
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const orientation = canvas.width >= canvas.height ? 'l' : 'p';
+    // Use a custom page size equal to rendered content to avoid A4 white margins
+    // and prevent automatic page splitting.
+    const doc = new jsPDF({
+      orientation,
+      unit: 'px',
+      format: [canvas.width, canvas.height],
+      compress: true,
+    });
+
+    doc.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height, undefined, 'FAST');
+
+    const reportId = String(currentData._id || 'report').trim();
+    const safeId = reportId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    doc.save(`bao_cao_ecg_${safeId}.pdf`);
+  } catch (err) {
+    alert('Không thể tạo PDF: ' + (err?.message || err));
+  } finally {
+    renderRoot.innerHTML = '';
+    if(pdfBtn){
+      pdfBtn.disabled = false;
+      pdfBtn.innerHTML = oldLabel || '<i data-feather="download"></i> Xuất báo cáo PDF';
+      feather.replace({'stroke-width':1.5,width:16,height:16});
+    }
+  }
+}
+
+function printRpt() {
+  if(!currentData) return;
+  window.open('/print-ecg/'+currentData._id,'_blank');
+}
+
+function escapeHtml(v) {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function recommendationFromPreds(preds) {
+  const sorted = [...(preds || [])].sort((a,b)=>Number(b.confidence || 0) - Number(a.confidence || 0));
+  if(!sorted.length) {
+    return 'Chưa ghi nhận dấu hiệu nguy hiểm rõ rệt, vẫn nên theo dõi định kỳ theo hướng dẫn bác sĩ.';
+  }
+  const top = sorted[0];
+  const topVal = Number(top.confidence || 0);
+  if (isNormalPrediction(top)) {
+    return 'Kết quả hiện tại cho thấy điện tâm đồ trong giới hạn bình thường. Duy trì lối sống lành mạnh và tái khám định kỳ.';
+  }
+  if (topVal > 0.7) {
+    return 'Kết quả cho thấy khả năng cao có bệnh lý tim mạch. Nên tham khảo bác sĩ chuyên khoa tim mạch sớm để được đánh giá thêm.';
+  }
+  if (topVal > 0.5) {
+    return 'Phát hiện một số dấu hiệu bất thường. Nên tiếp tục theo dõi và cân nhắc kiểm tra chuyên sâu nếu có triệu chứng.';
+  }
+  return 'Chưa ghi nhận dấu hiệu nguy hiểm rõ rệt, vẫn nên theo dõi định kỳ theo hướng dẫn bác sĩ.';
+}
+
+function buildPdfSheetHTML(data) {
+  const p = data.patient || {};
+  const preds = [...(data.multi_label_predictions || [])]
+    .sort((a,b)=>Number(b.confidence || 0) - Number(a.confidence || 0));
+  const top = preds[0] || null;
+  const topName = top ? (top.disease_vn || VN_MAP[top.disease] || top.disease) : 'Chưa có kết quả chẩn đoán';
+  const topPct = top ? `${(Number(top.confidence || 0) * 100).toFixed(1)}%` : '--';
+
+  const rows = preds.slice(0, 6).map((x) => {
+    const pct = Number(x.confidence || 0) * 100;
+    const pctText = `${pct.toFixed(1)}%`;
+    const width = Math.max(0, Math.min(100, pct));
+    return `
+      <div class="pdf-pred-row">
+        <div class="pdf-pred-name">${escapeHtml(x.disease)}</div>
+        <div class="pdf-pred-track"><div class="pdf-pred-fill" style="width:${width}%;"></div></div>
+        <div class="pdf-pred-pct">${escapeHtml(pctText)}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="pdf-sheet">
+      <div class="pdf-head">
+        <div class="pdf-kicker">Hệ thống AI chẩn đoán điện tâm đồ</div>
+        <h1 class="pdf-title">Báo cáo phân tích ECG</h1>
+        <div class="pdf-sub">PTB-XL CNN + BiLSTM</div>
+      </div>
+
+      <div class="pdf-grid-2">
+        <div class="pdf-card">
+          <div class="pdf-label">Mã phân tích</div>
+          <div class="pdf-value">${escapeHtml(shortAnalysisId(data._id))}</div>
+        </div>
+        <div class="pdf-card">
+          <div class="pdf-label">Thời gian</div>
+          <div class="pdf-value">${escapeHtml(data.timestamp_vn || data.timestamp || '--')}</div>
+        </div>
+        <div class="pdf-card">
+          <div class="pdf-label">Tên file</div>
+          <div class="pdf-value">${escapeHtml(data.name || '--')}</div>
+        </div>
+        <div class="pdf-card">
+          <div class="pdf-label">Nhịp tim</div>
+          <div class="pdf-value big">${escapeHtml(data.heart_rate ? Math.round(data.heart_rate) + ' BPM' : '--')}</div>
+        </div>
+      </div>
+
+      <div class="pdf-section-title">Thông tin bệnh nhân</div>
+      <div class="pdf-patient-grid">
+        <div class="pdf-card">
+          <div class="pdf-label">Mã bệnh nhân</div>
+          <div class="pdf-value">${escapeHtml(p.patient_id || data.patient_id || '--')}</div>
+        </div>
+        <div class="pdf-card">
+          <div class="pdf-label">Họ tên</div>
+          <div class="pdf-value">${escapeHtml(p.name || data.patient_name || '--')}</div>
+        </div>
+        <div class="pdf-card">
+          <div class="pdf-label">Tuổi / Giới tính</div>
+          <div class="pdf-value">${escapeHtml(`${p.age ?? data.patient_age ?? '--'} / ${p.gender || data.patient_gender || '--'}`)}</div>
+        </div>
+        <div class="pdf-card">
+          <div class="pdf-label">Số điện thoại</div>
+          <div class="pdf-value">${escapeHtml(p.phone || data.phone || '--')}</div>
+        </div>
+        <div class="pdf-card wide">
+          <div class="pdf-label">Địa chỉ</div>
+          <div class="pdf-value">${escapeHtml(p.address || data.address || '--')}</div>
+        </div>
+        <div class="pdf-card wide">
+          <div class="pdf-label">Triệu chứng</div>
+          <div class="pdf-value">${escapeHtml(p.notes || data.notes || '--')}</div>
+        </div>
+      </div>
+
+      <div class="pdf-section-title">Kết quả dự đoán AI</div>
+      <div class="pdf-result-box">
+        <div class="pdf-result-main">${escapeHtml(top ? `${top.disease} - ${topName}` : topName)}</div>
+        <div class="pdf-result-sub">Độ tin cậy cao nhất: ${escapeHtml(topPct)}</div>
+      </div>
+
+      <div class="pdf-pred-list">
+        ${rows || '<div class="pdf-value">Chưa có dữ liệu dự đoán đa bệnh lý.</div>'}
+      </div>
+
+      <div class="pdf-note">
+        <div class="pdf-note-title">Khuyến nghị</div>
+        <div class="pdf-note-text">${escapeHtml(recommendationFromPreds(preds))}</div>
+      </div>
+
+      <div class="pdf-footer">
+        <div>Xuất lúc: ${escapeHtml(new Date().toLocaleString('vi-VN'))}</div>
+        <div>Tài liệu tham khảo, không thay thế chẩn đoán bác sĩ.</div>
+      </div>
+    </div>`;
+}
+
+feather.replace({'stroke-width':1.5,width:16,height:16});
+</script>
+{% endblock %}

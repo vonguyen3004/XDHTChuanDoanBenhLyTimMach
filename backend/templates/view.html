@@ -1,7 +1,813 @@
 {% extends "base.html" %}
+{% block head %}
+<style>
+.ecg-page-title {
+  margin: 0;
+  color: #34d399;
+  font-size: 35px;
+  font-weight: 800;
+  letter-spacing: .35px;
+}
+
+.ecg-detail-shell {
+  background: linear-gradient(160deg, rgba(30,64,175,.14), rgba(15,23,42,.96) 46%, rgba(30,41,59,.94));
+  border: 1px solid rgba(46, 229, 138, 0.30) !important;
+  border-radius: 12px;
+  box-shadow: 0 14px 32px rgba(2,6,23,.38), 0 0 22px rgba(46,229,138,.12);
+}
+.ecg-detail-header {
+  border-bottom: 1px solid rgba(148,163,184,.18);
+  padding: 16px 22px;
+}
+
+.ecg-detail-body {
+  padding: 22px;
+}
+
+.patient-info-card {
+  background: linear-gradient(155deg, rgba(30,64,175,.14) 0%, rgba(15,23,42,.96) 50%, rgba(30,41,59,.92) 100%);
+  border: 1px solid rgba(16,185,129,.36) !important;
+  border-left: 4px solid rgba(16,185,129,.95) !important;
+  border-radius: 18px;
+  box-shadow: 0 16px 30px rgba(2, 6, 23, .42), 0 0 0 1px rgba(16,185,129,.12), 0 0 22px rgba(16,185,129,.12);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.patient-info-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(52,211,153,.55) !important;
+  box-shadow: 0 20px 38px rgba(2, 6, 23, .48), 0 0 0 1px rgba(16,185,129,.18), 0 0 28px rgba(16,185,129,.18);
+}
+.patient-info-card .card-body {
+  padding: 24px 26px;
+}
+.patient-info-title {
+  color: #34d399;
+  letter-spacing: 0.04em;
+  font-size: 25px;
+  font-weight: 800;
+  text-shadow: 0 0 14px rgba(52,211,153,.34), 0 0 30px rgba(16,185,129,.24);
+}
+.patient-info-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.patient-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.patient-title-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, rgba(16,185,129,.22), rgba(15,23,42,.95));
+  border: 1px solid rgba(16,185,129,.42);
+  box-shadow: 0 0 0 3px rgba(16,185,129,.12), 0 0 16px rgba(16,185,129,.20), 0 0 28px rgba(16,185,129,.10);
+  color: #6ee7b7;
+}
+.patient-title-icon svg {
+  width: 20px;
+  height: 20px;
+  opacity: 1;
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 5px rgba(110,231,183,.35));
+}
+.patient-title-stack {
+  display: flex;
+  flex-direction: column;
+}
+.patient-subtitle {
+  margin-top: 2px;
+  font-size: 12px;
+  letter-spacing: .3px;
+  color: rgba(148,163,184,.9);
+}
+.patient-meta-chip {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(16,185,129,.50);
+  background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(2,6,23,.5));
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.18), 0 0 14px rgba(16,185,129,.16);
+  color: #a7f3d0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.patient-grid {
+  color: #e2e8f0;
+  font-size: 18px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+.patient-grid .label {
+  display: block;
+  color: rgba(148,163,184,.76);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .35px;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.patient-item {
+  grid-column: span 4;
+  background: linear-gradient(180deg, rgba(15,23,42,.72), rgba(15,23,42,.60));
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 rgba(148,163,184,.10);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.patient-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(52,211,153,.32);
+  box-shadow: 0 8px 18px rgba(2,6,23,.30), inset 0 1px 0 rgba(167,243,208,.12);
+}
+.patient-item.span-8 {
+  grid-column: span 8;
+}
+.patient-item.span-12 {
+  grid-column: 1 / -1;
+}
+.patient-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.patient-item-icon {
+  width: 16px;
+  height: 16px;
+  color: #6ee7b7;
+  opacity: 1;
+  stroke-width: 2.35;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.patient-item-content {
+  min-width: 0;
+}
+.patient-item .value {
+  color: #f8fafc;
+  font-weight: 700;
+  font-size: 20px;
+  text-shadow: 0 1px 0 rgba(2,6,23,.35);
+  line-height: 1.45;
+}
+
+.dashboard-card {
+  background: linear-gradient(160deg, rgba(16,185,129,.08), rgba(30,41,59,.94) 42%, rgba(15,23,42,.95));
+  border: 1px solid rgba(16,185,129,.24) !important;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(2,6,23,.30), inset 0 1px 0 rgba(148,163,184,.10);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(52,211,153,.40) !important;
+  box-shadow: 0 14px 30px rgba(2,6,23,.36), inset 0 1px 0 rgba(167,243,208,.14);
+}
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #34d399;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  font-size: 25px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  text-shadow: 0 0 14px rgba(52,211,153,.34), 0 0 30px rgba(16,185,129,.24);
+}
+.section-heading i {
+  filter: drop-shadow(0 0 10px rgba(52,211,153,.56));
+}
+
+.ecg-wave-card {
+  padding: 14px;
+}
+.ecg-monitor {
+  border-radius: 12px;
+  border: 1px solid rgba(52,211,153,.26);
+  background: linear-gradient(180deg, rgba(15,23,42,.90), rgba(2,6,23,.92));
+  box-shadow: inset 0 0 0 1px rgba(16,185,129,.10), 0 0 16px rgba(16,185,129,.08);
+  padding: 10px;
+  overflow-x: auto;
+}
+
+.diagnosis-card {
+  border-left: none !important;
+  padding: 16px;
+}
+.diag-subcards {
+  display: grid;
+  gap: 12px;
+}
+.diag-subcard {
+  background: rgba(15,23,42,.48);
+  border: 1px solid rgba(148,163,184,.22);
+  border-radius: 12px;
+  padding: 14px;
+  font-family: 'Cambria', 'Georgia', serif;
+}
+.diag-subcard-primary {
+  padding-top: 14px;
+}
+.diag-primary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+.diag-secondary-line {
+  margin-top: -4px;
+  margin-bottom: 4px;
+  color: #94a3b8;
+  font-size: 15px;
+  line-height: 1.2;
+}
+.diag-subcard.bpm-card {
+  margin-top: 0;
+}
+.diag-subcard-title {
+  color: #f1f5f9;
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .45px;
+  margin-bottom: 0;
+}
+.diagnosis-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #34d399;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  font-size: 25px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  text-shadow: 0 0 14px rgba(52,211,153,.34), 0 0 30px rgba(16,185,129,.24);
+}
+.diagnosis-alert-icon {
+  width: 1em;
+  height: 1em;
+  color: currentColor;
+  stroke-width: 2.15;
+  filter: drop-shadow(0 0 10px rgba(52,211,153,.56));
+}
+.disease-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  text-transform: uppercase;
+  border: 1px solid rgba(16,185,129,.50);
+  background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(2,6,23,.5));
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.18), 0 0 14px rgba(16,185,129,.16);
+  color: #a7f3d0;
+  margin-bottom: 10px;
+}
+.disease-badge svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.3;
+}
+.disease-badge.badge-normal {
+  color: #a7f3d0;
+  border-color: rgba(16,185,129,.50);
+  background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(2,6,23,.5));
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.18), 0 0 14px rgba(16,185,129,.16);
+}
+.disease-badge.badge-abnormal {
+  color: #a7f3d0;
+  border-color: rgba(16,185,129,.50);
+  background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(2,6,23,.5));
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.18), 0 0 14px rgba(16,185,129,.16);
+}
+.disease-badge-corner {
+  position: static;
+  margin-left: auto;
+  margin-bottom: 0;
+}
+.diagnosis-primary {
+  color: #f8fafc;
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.conf-info {
+  color: #cbd5e1;
+  line-height: 1.7;
+}
+
+.bpm-card {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid rgba(251,113,133,.35) !important;
+  background: radial-gradient(circle at 85% 20%, rgba(251,113,133,.16), rgba(15,23,42,.92) 48%), linear-gradient(145deg, rgba(30,41,59,.96), rgba(15,23,42,.94));
+  box-shadow: inset 0 1px 0 rgba(251,113,133,.18), 0 10px 28px rgba(2,6,23,.40), 0 0 18px rgba(251,113,133,.14);
+}
+.bpm-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.bpm-label {
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: .55px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.bpm-state-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(16,185,129,.50);
+  color: #a7f3d0;
+  background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(2,6,23,.5));
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.18), 0 0 14px rgba(16,185,129,.16);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.bpm-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bpm-card .heart-icon {
+  color: #f87171;
+  width: 32px;
+  height: 32px;
+  fill: rgba(248,113,113,.18);
+  filter: drop-shadow(0 0 8px rgba(248,113,113,.42));
+}
+.bpm-value {
+  color: #fb7185;
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: .35px;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(251,113,133,.26), 0 0 24px rgba(251,113,133,.18);
+  filter: drop-shadow(0 0 8px rgba(251,113,133,.20));
+}
+.bpm-time {
+  font-size: 15px;
+  color: rgba(148,163,184,.92);
+}
+.bpm-time strong {
+  color: #e2e8f0;
+  font-weight: 700;
+}
+.bpm-card.bpm-normal {
+  border-color: rgba(52,211,153,.42) !important;
+  background: radial-gradient(circle at 85% 20%, rgba(52,211,153,.16), rgba(15,23,42,.92) 48%), linear-gradient(145deg, rgba(30,41,59,.96), rgba(15,23,42,.94));
+  box-shadow: inset 0 1px 0 rgba(52,211,153,.2), 0 10px 28px rgba(2,6,23,.40), 0 0 18px rgba(52,211,153,.14);
+}
+.bpm-card.bpm-normal .heart-icon,
+.bpm-card.bpm-normal .bpm-value {
+  color: #34d399;
+}
+.bpm-card.bpm-normal .bpm-state-chip {
+  border-color: rgba(16,185,129,.50);
+  color: #a7f3d0;
+  background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(2,6,23,.5));
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.18), 0 0 14px rgba(16,185,129,.16);
+}
+.bpm-card.bpm-warning {
+  border-color: rgba(251,191,36,.45) !important;
+  background: radial-gradient(circle at 85% 20%, rgba(251,191,36,.18), rgba(15,23,42,.92) 48%), linear-gradient(145deg, rgba(30,41,59,.96), rgba(15,23,42,.94));
+  box-shadow: inset 0 1px 0 rgba(251,191,36,.2), 0 10px 28px rgba(2,6,23,.40), 0 0 18px rgba(251,191,36,.14);
+}
+.bpm-card.bpm-warning .heart-icon,
+.bpm-card.bpm-warning .bpm-value {
+  color: #fbbf24;
+}
+.bpm-card.bpm-warning .bpm-state-chip {
+  border-color: rgba(16,185,129,.50);
+  color: #a7f3d0;
+  background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(2,6,23,.5));
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.18), 0 0 14px rgba(16,185,129,.16);
+}
+.bpm-card.bpm-danger .bpm-state-chip {
+  border-color: rgba(16,185,129,.50);
+  color: #a7f3d0;
+  background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(2,6,23,.5));
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.18), 0 0 14px rgba(16,185,129,.16);
+}
+.diagnosis-card .bpm-card {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+/* Severity Badges */
+.severity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border: 1px solid;
+}
+.severity-low {
+  color: #d1fae5;
+  background: rgba(16,185,129,.18);
+  border-color: rgba(16,185,129,.45);
+}
+.severity-medium {
+  color: #fef3c7;
+  background: rgba(245,158,11,.18);
+  border-color: rgba(245,158,11,.45);
+}
+.severity-high {
+  color: #fee2e2;
+  background: rgba(239,68,68,.18);
+  border-color: rgba(239,68,68,.45);
+}
+.severity-critical {
+  color: #fecaca;
+  background: rgba(220,38,38,.2);
+  border-color: rgba(220,38,38,.5);
+  box-shadow: 0 0 10px rgba(220,38,38,.18);
+}
+.severity-soft {
+  color: #bfdbfe;
+  background: rgba(59,130,246,.18);
+  border-color: rgba(59,130,246,.38);
+}
+
+.xai-diagnosis-card {
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(52,211,153,.24);
+  background: linear-gradient(160deg, rgba(17,24,39,.88), rgba(15,23,42,.86));
+  box-shadow: inset 0 1px 0 rgba(148,163,184,.12);
+}
+.xai-diagnosis-head {
+  margin-bottom: 14px;
+}
+.xai-diagnosis-title {
+  color: #f8fafc;
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .32px;
+}
+.xai-diagnosis-subtitle {
+  margin-top: 5px;
+  color: #8fa3bc;
+  font-size: 14px;
+  font-weight: 500;
+}
+.xai-card-body {
+  display: grid;
+  gap: 0;
+}
+.xai-severity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.xai-severity-label {
+  color: #9fb0c6;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.severity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.severity-title {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.severity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.divider {
+  height: 1px;
+  background: rgba(0,255,200,0.2);
+  margin-bottom: 16px;
+}
+.xai-section-divider {
+  height: 1px;
+  background: rgba(0,255,200,0.2);
+  margin-bottom: 16px;
+}
+.xai-section {
+  margin: 0;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.section-block {
+  padding: 0;
+}
+.xai-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #2dd4bf;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: .35px;
+  margin: 0;
+}
+.section-title {
+  font-weight: 600;
+  color: #2dd4bf;
+  line-height: 1.4;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.xai-section-title i {
+  width: 18px;
+  height: 18px;
+}
+.xai-section-title svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+.xai-section-title.is-positive {
+  color: #00e6a8;
+}
+.xai-section-content {
+  color: #cbd5e1;
+  font-size: 20px;
+  line-height: 1.6;
+}
+.xai-card-footer {
+  margin-top: 0;
+}
+.xai-recommendation {
+  color: #cbd5e1;
+  font-size: 20px;
+  line-height: 1.6;
+}
+.recommendation-box {
+  background: rgba(0,230,168,0.12);
+  border-left: 3px solid #00e6a8;
+  box-shadow: inset 0 1px 0 rgba(167,243,208,.08);
+}
+.content-box {
+  background: rgba(0, 255, 170, 0.04);
+  border: 1px solid rgba(0, 255, 170, 0.15);
+  border-left: 3px solid #00ffaa;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+.section-box {
+  padding: 12px 14px;
+  border-radius: 10px;
+  line-height: 1.6;
+  margin: 0;
+  transition: transform .18s ease, box-shadow .22s ease, border-color .22s ease;
+}
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.badge.danger,
+.severity-high,
+.severity-critical {
+  background: rgba(255,80,80,0.15);
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+}
+.info {
+  color: #4cc9f0;
+  text-shadow: 0 0 6px rgba(76,201,240,.16);
+}
+.info-box,
+.description-box {
+  background: rgba(76,201,240,0.06);
+  border: 1px solid rgba(76,201,240,0.18);
+  border-left: 3px solid #4cc9f0;
+  box-shadow: 0 0 0 1px rgba(76,201,240,0.06) inset, 0 0 8px rgba(76,201,240,0.10);
+}
+.ecg {
+  color: #b388ff;
+  text-shadow: 0 0 6px rgba(179,136,255,.14);
+}
+.ecg-box {
+  background: rgba(179,136,255,0.06);
+  border: 1px solid rgba(179,136,255,0.18);
+  border-left: 3px solid #b388ff;
+  box-shadow: 0 0 0 1px rgba(179,136,255,0.06) inset, 0 0 8px rgba(179,136,255,0.10);
+}
+.recommend {
+  color: #00e6a8;
+  text-shadow: 0 0 6px rgba(0,230,168,.16);
+}
+.recommend-box {
+  background: rgba(0,230,168,0.08);
+  border: 1px solid rgba(0,230,168,0.18);
+  border-left: 3px solid #00e6a8;
+  box-shadow: 0 0 0 1px rgba(0,230,168,0.07) inset, 0 0 9px rgba(0,230,168,0.12);
+}
+.section-box:hover {
+  transform: translateY(-1px);
+}
+.description-box:hover {
+  box-shadow: 0 0 0 1px rgba(76,201,240,0.10) inset, 0 0 11px rgba(76,201,240,0.14);
+}
+.ecg-box:hover {
+  box-shadow: 0 0 0 1px rgba(179,136,255,0.10) inset, 0 0 11px rgba(179,136,255,0.14);
+}
+.recommend-box:hover {
+  box-shadow: 0 0 0 1px rgba(0,230,168,0.10) inset, 0 0 12px rgba(0,230,168,0.16);
+}
+.description-box {
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.15);
+  border-left: 3px solid #3b82f6;
+}
+.ecg-box {
+  background: rgba(168,85,247,0.08);
+  border: 1px solid rgba(168,85,247,0.15);
+  border-left: 3px solid #a855f7;
+}
+.content-box p {
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.predict-items-wrapper {
+  padding: 12px;
+  border: 1px solid rgba(148,163,184,.20);
+  border-radius: 10px;
+  background: rgba(15,23,42,.35);
+}
+.predict-list {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.predict-heading {
+  color: #f1f5f9;
+  text-transform: uppercase;
+  letter-spacing: .45px;
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.predict-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 78px;
+  gap: 14px;
+  align-items: center;
+}
+.predict-name {
+  color: #e2e8f0;
+  font-weight: 700;
+  font-size: 18px;
+}
+.predict-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(52,211,153,.36);
+  background: linear-gradient(135deg, rgba(16,185,129,.16), rgba(2,6,23,.58));
+  color: #a7f3d0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .3px;
+}
+.predict-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148,163,184,.20);
+  overflow: hidden;
+}
+.predict-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, #34d399);
+}
+.predict-pct {
+  text-align: right;
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.diagnosis-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148,163,184,.20);
+  font-size: 12px;
+  color: rgba(148,163,184,.75);
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.btn-analyze {
+  background: linear-gradient(135deg, #10b981, #22c55e) !important;
+  border: none !important;
+  color: #f0fdf4 !important;
+  box-shadow: 0 8px 20px rgba(16,185,129,.25);
+}
+.btn-export {
+  background: rgba(30,41,59,.65) !important;
+  border: 1px solid rgba(148,163,184,.35) !important;
+  color: #e2e8f0 !important;
+  border-radius: 8px !important;
+}
+@media (max-width: 992px) {
+  .patient-item,
+  .patient-item.span-8 {
+    grid-column: span 6;
+  }
+  .patient-item.span-12 {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 768px) {
+  .patient-info-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .patient-item,
+  .patient-item.span-8,
+  .patient-item.span-12 {
+    grid-column: 1 / -1;
+  }
+}
+</style>
+{% endblock %}
 {% block content %}
+{% import 'components/diagnosis_card.html' as diagnosisCard %}
+{% import 'components/heart_rate_card.html' as heartRateCard %}
 <!-- page header replaced by card header below -->
 {% set hr = ecg.get('heart_rate') %}
+{% set patient = ecg.get('patient', {}) %}
+{% set patient_id = patient.get('patient_id') or ecg.get('patient_id') %}
+{% set patient_name = patient.get('name') or ecg.get('patient_name') %}
+{% set patient_age = patient.get('age') if patient.get('age') is not none else ecg.get('patient_age') %}
+{% set patient_gender = patient.get('gender') or ecg.get('patient_gender') %}
+{% set patient_phone = patient.get('phone') or ecg.get('patient_phone') %}
+{% set patient_address = patient.get('address') or ecg.get('patient_address') %}
+{% set patient_notes = patient.get('notes') or ecg.get('patient_notes') %}
+{% set disease_full_names = {
+  'NORM': 'Nhịp tim bình thường',
+  'BÌNH THƯỜNG': 'Nhịp tim bình thường',
+  'LBBB': 'Block nhánh trái',
+  'RBBB': 'Block nhánh phải',
+  'PAC': 'Ngoại tâm thu nhĩ',
+  'PVC': 'Ngoại tâm thu thất'
+} %}
 {% set hr_status = 'normal' %}
 {% if hr is not none %}
   {% if hr < 60 or hr > 100 %}
@@ -11,59 +817,189 @@
     {% set hr_status = 'danger' %}
   {% endif %}
 {% endif %}
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    <div class="mt-2">
-      {% for category, msg in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-          {{ msg }}
-          <button type="button" class="close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-{% endwith %}
-<div class="card shadow-lg mb-4">
-  <div class="card-header">
-      <h2 class="mb-0" style="color: var(--color-primary);">Chi tiết ECG {{ ecg['_id'] }}</h2>
+<div class="card ecg-detail-shell mb-4">
+  <div class="ecg-detail-header">
+    <h2 class="ecg-page-title">CHI TIẾT ECG {{ ecg['_id'] }}</h2>
   </div>
-  <div class="card-body ecg-card">
-    <div class="mb-3" style="height:500px; overflow-x:auto;">
-      <canvas id="ecgChart" style="min-width:800px;"></canvas>
+  <div class="ecg-detail-body ecg-card">
+    <div class="card patient-info-card mb-3">
+      <div class="card-body">
+        <div class="patient-info-head">
+          <div class="patient-title-wrap">
+            <div class="patient-title-icon" aria-hidden="true">
+              <i data-feather="user"></i>
+            </div>
+            <div class="patient-title-stack">
+              <h6 class="text-uppercase mb-0 patient-info-title">Thông tin bệnh nhân</h6>
+              <span class="patient-subtitle">Patient Profile Overview</span>
+            </div>
+          </div>
+          <div class="patient-meta-chip">{{ patient_gender or '--' }} · {{ patient_age if patient_age is not none else '--' }} tuổi</div>
+        </div>
+        <div class="patient-grid">
+          <div class="patient-item">
+            <div class="patient-item-row">
+              <i data-feather="credit-card" class="patient-item-icon"></i>
+              <div class="patient-item-content">
+                <span class="label">Mã BN</span>
+                <span class="value">{{ patient_id or '--' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="patient-item span-8">
+            <div class="patient-item-row">
+              <i data-feather="user" class="patient-item-icon"></i>
+              <div class="patient-item-content">
+                <span class="label">Họ tên</span>
+                <span class="value">{{ patient_name or '--' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="patient-item">
+            <div class="patient-item-row">
+              <i data-feather="calendar" class="patient-item-icon"></i>
+              <div class="patient-item-content">
+                <span class="label">Tuổi</span>
+                <span class="value">{{ patient_age if patient_age is not none else '--' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="patient-item">
+            <div class="patient-item-row">
+              <i data-feather="users" class="patient-item-icon"></i>
+              <div class="patient-item-content">
+                <span class="label">Giới tính</span>
+                <span class="value">{{ patient_gender or '--' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="patient-item">
+            <div class="patient-item-row">
+              <i data-feather="phone" class="patient-item-icon"></i>
+              <div class="patient-item-content">
+                <span class="label">SĐT</span>
+                <span class="value">{{ patient_phone or '--' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="patient-item span-12">
+            <div class="patient-item-row">
+              <i data-feather="map-pin" class="patient-item-icon"></i>
+              <div class="patient-item-content">
+                <span class="label">Địa chỉ</span>
+                <span class="value">{{ patient_address or '--' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="patient-item span-12">
+            <div class="patient-item-row">
+              <i data-feather="file-text" class="patient-item-icon"></i>
+              <div class="patient-item-content">
+                <span class="label">Triệu chứng / ghi chú</span>
+                <span class="value">{{ patient_notes or '--' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-card ecg-wave-card mb-3">
+      <div class="section-heading">
+        <i data-feather="activity"></i>
+        ECG WAVEFORM
+      </div>
+      <div class="ecg-monitor" style="height:500px;">
+        <canvas id="ecgChart" style="min-width:800px;"></canvas>
+      </div>
     </div>
     <script src="/static/js/ecg.js"></script>
     <script>loadECG("{{ ecg['_id'] }}");</script>
-    <div class="mb-3 bpm-display {{ hr_status }}{% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %} abnormal{% endif %}">
-      <i data-feather="heart" class="icon-lg"></i>
-      {% if ecg.get('heart_rate') is not none %}
-        {{ "%0.1f"|format(ecg.heart_rate) }} BPM
-      {% else %}
-        -- BPM
-      {% endif %}
-    </div>
-    <div class="card diagnosis-card {% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %}abnormal{% endif %} mb-3">
-      <span class="badge status-{{ hr_status }} ms-2">{{ hr_status.capitalize() }}</span>
+    <div class="card dashboard-card diagnosis-card {% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %}abnormal{% endif %} mb-3">
       <div class="card-body">
-        <strong class="text-uppercase">
-          <i data-feather="{% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %}alert-triangle{% else %}check-circle{% endif %}" class="{% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %}text-danger{% else %}text-success{% endif %}"></i>
-          Kết quả chẩn đoán:
-        </strong>
-        {% if ecg.get('prediction_label') %}
-          {{ ecg.prediction_label }} (Mã {{ ecg.prediction }})
-          {% if ecg.get('prediction_desc') %}
-            <div class="mt-1 small text-muted">{{ ecg.prediction_desc.replace('. ', '.<br>')|safe }}</div>
+        <div class="diagnosis-title">
+          {% if ecg.get('prediction_label') and ecg.prediction_label!='Bình thường' %}
+            <i data-feather="alert-triangle" class="diagnosis-alert-icon"></i>
           {% endif %}
-        {% elif ecg.get('prediction') is not none %}
-          {{ ecg.prediction }}
-        {% else %}
-          Chưa có
+          KẾT QUẢ CHẨN ĐOÁN
+        </div>
+        <div class="diag-subcards">
+          <div class="diag-subcard diag-subcard-primary">
+            {% set predictions = ecg.get('multi_label_predictions') or [] %}
+            {% set top_prediction = predictions[0] if predictions else none %}
+            {% set raw_label = top_prediction.disease if top_prediction and top_prediction.disease else ecg.get('prediction_label') %}
+            {% set label_key = normalizeLabel(raw_label) %}
+            {% if label_key %}
+              {% set primary_full_name = getVietnameseName(label_key) or disease_full_names.get(label_key, disease_full_names.get(raw_label)) %}
+              {% set is_normal_label = label_key in ['NORM', 'BÌNH THƯỜNG'] %}
+              <div class="diag-primary-head">
+                <div class="diag-subcard-title">
+                  {{ label_key }}{% if primary_full_name and primary_full_name != label_key %} - {{ primary_full_name }}{% endif %}
+                </div>
+                <span class="disease-badge disease-badge-corner {% if is_normal_label %}badge-normal{% else %}badge-abnormal{% endif %}">
+                  <i data-feather="{% if is_normal_label %}check-circle{% else %}alert-triangle{% endif %}"></i>
+                  THẺ BỆNH {{ label_key }}
+                </span>
+              </div>
+              {% if getEnglishName(label_key) or primary_full_name %}
+                <div class="diag-secondary-line">
+                  {{ getEnglishName(label_key) or 'ECG diagnosis' }}{% if primary_full_name %} - {{ primary_full_name|lower }}{% endif %}
+                </div>
+              {% endif %}
+              {% set disease_detail = getDiseaseDetail(label_key) %}
+              {% set severity_class = getSeverityColor(disease_detail.severity) if disease_detail else 'severity-soft' %}
+              {{ diagnosisCard.render(label_key, disease_detail, primary_full_name, getEnglishName(label_key), severity_class, false, false) }}
+            {% elif ecg.get('prediction') is not none %}
+              <div class="diag-subcard-title">Mã {{ ecg.prediction }}</div>
+            {% else %}
+              <div class="conf-info">Chưa có kết quả chẩn đoán.</div>
+            {% endif %}
+          </div>
+
+          <div class="diag-subcard">
+            <div class="predict-heading">NHẬN ĐỊNH THEO TỪNG BỆNH LÝ</div>
+            <div class="predict-items-wrapper">
+              {% if ecg.get('multi_label_predictions') %}
+                <div class="predict-list">
+                  {% for item in ecg.multi_label_predictions[:5] %}
+                    <div class="predict-row">
+                      <div class="predict-name"><span class="predict-badge">{{ item.disease }}</span></div>
+                      <div class="predict-track">
+                        <div class="predict-fill" data-width="{{ "%0.1f"|format(item.confidence * 100) }}"></div>
+                      </div>
+                      <div class="predict-pct">{{ "%0.1f"|format(item.confidence * 100) }}%</div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="conf-info">Chưa có dữ liệu nhận định đa bệnh lý.</div>
+              {% endif %}
+            </div>
+          </div>
+
+          {{ heartRateCard.render(ecg.get('heart_rate'), ecg['timestamp'], hr_status) }}
+        </div>
+
+        {% if ecg.get('inference_meta') %}
+          <div class="diagnosis-footer">
+            <div>Model: {{ ecg.inference_meta.get('model_version', ecg.inference_meta.get('model_type', 'unknown')) }}</div>
+            <div>Inference at: {{ ecg.inference_meta.get('inference_at', '') }}</div>
+          </div>
         {% endif %}
       </div>
     </div>
-    <form id="analyzeForm" method="post" action="/analyze/{{ ecg['_id'] }}" class="d-inline">
-        <button class="btn btn-primary"><i data-feather="rotate-cw" class="icon-lg"></i> Phân tích lại</button>
-    </form>
-    <a class="btn btn-secondary" href="/export/{{ ecg['_id'] }}"><i data-feather="share"></i> Xuất PDF</a>
+    <div class="action-row">
+      <form id="analyzeForm" method="post" action="/analyze/{{ ecg['_id'] }}" class="d-inline">
+          <button class="btn btn-primary btn-analyze"><i data-feather="rotate-cw" class="icon-lg"></i> Phân tích lại</button>
+      </form>
+    </div>
   </div>
 </div>
+<script>
+document.querySelectorAll('.predict-fill[data-width]').forEach((el) => {
+  const w = Number(el.dataset.width || '0');
+  const safe = Math.max(0, Math.min(100, w));
+  el.style.width = `${safe}%`;
+});
+</script>
 {% endblock %}

@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+{% block title %}Phân tích ECG - AI{% endblock %}
+
+{% block head %}
+<style>
+.file-info-box{display:none;margin-top:12px;padding:12px;
+  background:rgba(34,197,94,.06);border-radius:8px;
+  border:1px solid rgba(34,197,94,.2);}
+.file-info-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;}
+.analyze-left-stack{display:flex;flex-direction:column;}
+.upload-form-stack{display:flex;flex-direction:column;gap:24px;}
+@media (max-width: 768px) {
+  .upload-form-stack{gap:20px;}
+  [data-patient-grid] > div { grid-column: span 12 !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Phân tích Điện tâm đồ</h1>
+  <p class="page-subtitle">Tải lên file ECG và nhận kết quả chẩn đoán từ AI</p>
+</div>
+
+<div class="analyze-grid" style="margin-bottom:20px;">
+  <!-- Left stack: patient info + upload -->
+  <div class="analyze-left-stack">
+    <form id="uploadForm" class="upload-form-stack" action="/upload" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="upload_mode" id="uploadModeInput" value="csv">
+
+      <div class="card">
+        <div class="card-header-row">
+          <span class="card-title">Thông tin bệnh nhân</span>
+        </div>
+        <div data-patient-grid style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;">
+          <div style="grid-column:span 4;">
+            <label class="form-label">Mã bệnh nhân</label>
+            <input type="text" class="form-control" name="patient_id" placeholder="BN001" required>
+          </div>
+          <div style="grid-column:span 8;">
+            <label class="form-label">Họ và tên</label>
+            <input type="text" class="form-control" name="patient_name" placeholder="Nguyễn Văn A" required>
+          </div>
+          <div style="grid-column:span 3;">
+            <label class="form-label">Giới tính</label>
+            <select class="form-control" name="patient_gender" required>
+              <option value="">Chọn</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+            </select>
+          </div>
+          <div style="grid-column:span 3;">
+            <label class="form-label">Tuổi</label>
+            <input type="number" class="form-control" name="patient_age" min="1" max="130" required>
+          </div>
+          <div style="grid-column:span 6;">
+            <label class="form-label">Số điện thoại</label>
+            <input type="text" class="form-control" name="patient_phone" placeholder="090xxxxxxx">
+          </div>
+          <div style="grid-column:span 12;">
+            <label class="form-label">Địa chỉ</label>
+            <input type="text" class="form-control" name="patient_address" placeholder="Cần Thơ">
+          </div>
+          <div style="grid-column:span 12;">
+            <label class="form-label">Triệu chứng / ghi chú</label>
+            <textarea class="form-control" name="patient_notes" rows="2" placeholder="Đau ngực, khó thở..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header-row">
+          <span class="card-title">Tải file ECG</span>
+          <div>
+            <span class="badge badge-blue">CSV</span>
+            <span class="badge badge-blue" style="margin-left:4px;">WFDB</span>
+            <span class="badge badge-blue" style="margin-left:4px;">MAT</span>
+          </div>
+        </div>
+
+        <!-- Mode selector -->
+        <div style="display:flex;gap:20px;margin-bottom:16px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-muted);">
+            <input type="radio" name="upload_mode_ui" value="csv" checked id="modeCsv" style="accent-color:var(--primary);">
+            CSV (12 leads)
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-muted);">
+            <input type="radio" name="upload_mode_ui" value="wfdb" id="modeWfdb" style="accent-color:var(--primary);">
+            WFDB (.hea + .dat)
+          </label>
+        </div>
+
+        <!-- Dropzone -->
+        <div class="dropzone" id="dropZone">
+          <div class="dz-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+          </div>
+          <div class="dz-title" id="dropTitle">Kéo thả file ECG vào đây</div>
+          <div class="dz-sub">hoặc bấm để chọn file · Hỗ trợ CSV, WFDB, MAT</div>
+          <input type="file" name="file" id="fileInput" accept=".csv,.txt,.mat">
+        </div>
+
+        <!-- WFDB section -->
+        <div id="wfdbSection" style="display:none;margin-top:16px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label class="form-label">File header (.hea)</label>
+              <input type="file" name="hea_file" id="heaInput" accept=".hea" class="form-control" style="padding:8px;">
+            </div>
+            <div>
+              <label class="form-label">File tín hiệu (.dat)</label>
+              <input type="file" name="dat_file" id="datInput" accept=".dat" class="form-control" style="padding:8px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- File info -->
+        <div class="file-info-box" id="fileInfoBox">
+          <div class="file-info-row">
+            <span style="color:var(--text-muted);">Tên file:</span>
+            <span id="infoName" style="color:var(--primary);font-weight:600;"></span>
+          </div>
+          <div class="file-info-row">
+            <span style="color:var(--text-muted);">Kích thước:</span>
+            <span id="infoSize" style="color:var(--text);"></span>
+          </div>
+          <div class="file-info-row" id="infoSamplesRow" style="display:none;">
+            <span style="color:var(--text-muted);">Số mẫu tín hiệu:</span>
+            <span id="infoSamples" style="color:var(--text);"></span>
+          </div>
+        </div>
+
+        <!-- Threshold -->
+        <div style="margin-top:16px;">
+          <label class="form-label">Ngưỡng chẩn đoán: <span id="thresholdDisplay" style="color:var(--primary);">0.50</span></label>
+          <input type="range" name="threshold" id="thresholdRange" min="0.1" max="0.9" step="0.05" value="0.5"
+                 style="width:100%;accent-color:var(--primary);">
+        </div>
+
+        <!-- Buttons -->
+        <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline" id="previewBtn">
+            <i data-feather="eye"></i> Xem trước ECG
+          </button>
+          <button type="submit" class="btn btn-primary" id="analyzeBtn">
+            <i data-feather="cpu"></i> Phân tích bằng AI
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- AI Result Card -->
+  <div class="card">
+    <div class="card-header-row">
+      <span class="card-title">Kết quả AI xem trước</span>
+      <span id="analyzeSpinner" class="spinner" style="display:none;"></span>
+    </div>
+
+    <div id="resultPlaceholder" style="text-align:center;padding:40px 0;color:var(--text-muted);">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"
+           style="margin-bottom:12px;opacity:.4;display:block;margin-left:auto;margin-right:auto;">
+        <circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path>
+      </svg>
+      <p>Chưa có kết quả.<br>Tải file và bấm "Phân tích bằng AI".</p>
+    </div>
+
+    <div id="resultContent" style="display:none;">
+      <!-- BPM + Status -->
+      <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px;
+                  padding-bottom:16px;border-bottom:1px solid var(--border);">
+        <div>
+          <div class="bpm-display" id="bpmValue">--</div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-top:4px;">BPM</div>
+        </div>
+        <div>
+          <div id="heartStatus" class="status-pill status-normal">Bình thường</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="modelTypeLabel"></div>
+        </div>
+      </div>
+
+      <!-- Predictions list -->
+      <div id="predictionList" style="margin-bottom:16px;"></div>
+
+      <!-- Probability chart -->
+      <div>
+        <div class="card-title" style="margin-bottom:10px;">Xác suất từng bệnh (%)</div>
+        <div style="height:200px;"><canvas id="probChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ECG Waveform -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header-row">
+    <span class="card-title">Biểu đồ tín hiệu ECG</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div class="lead-selector" id="leadSelector">
+        {% for name in ['I','II','III','aVR','aVL','aVF','V1','V2','V3','V4','V5','V6'] %}
+        <button class="lead-btn {% if loop.first %}active{% endif %}" data-lead="{{ loop.index0 }}">{{ name }}</button>
+        {% endfor %}
+      </div>
+      <button class="btn btn-sm btn-outline" id="animateBtn">
+        <i data-feather="play" id="animIcon"></i>
+        <span id="animText">Animation</span>
+      </button>
+    </div>
+  </div>
+  <div class="ecg-container">
+    <div class="ecg-grid"></div>
+    <div class="ecg-canvas-wrapper">
+      <canvas id="ecgWaveform"></canvas>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ===== Upload logic =====
+const modeCsv   = document.getElementById('modeCsv');
+const modeWfdb  = document.getElementById('modeWfdb');
+const modeInput = document.getElementById('uploadModeInput');
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const wfdbSec   = document.getElementById('wfdbSection');
+const fileInfoBox = document.getElementById('fileInfoBox');
+const infoName  = document.getElementById('infoName');
+const infoSize  = document.getElementById('infoSize');
+const infoSamples = document.getElementById('infoSamples');
+const infoSamplesRow = document.getElementById('infoSamplesRow');
+const threshDisp = document.getElementById('thresholdDisplay');
+const threshRange = document.getElementById('thresholdRange');
+const previewBtn = document.getElementById('previewBtn');
+const spinner    = document.getElementById('analyzeSpinner');
+const placeholder = document.getElementById('resultPlaceholder');
+const resultContent = document.getElementById('resultContent');
+const bpmEl      = document.getElementById('bpmValue');
+const heartEl    = document.getElementById('heartStatus');
+const predList   = document.getElementById('predictionList');
+let probChart    = null;
+let ecgMatrix    = null;
+let currentLead  = 0;
+let animId       = null;
+let animOff      = 0;
+let isAnim       = false;
+let demoT        = 0;
+
+[modeCsv, modeWfdb].forEach(r => r.addEventListener('change', () => {
+  const w = modeWfdb.checked;
+  modeInput.value = w ? 'wfdb' : 'csv';
+  wfdbSec.style.display   = w ? 'block' : 'none';
+  dropZone.style.display  = w ? 'none' : 'block';
+}));
+
+threshRange.addEventListener('input', () => {
+  threshDisp.textContent = parseFloat(threshRange.value).toFixed(2);
+});
+
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if(e.dataTransfer.files[0]){ fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); }
+});
+fileInput.addEventListener('change', () => { if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(f) {
+  infoName.textContent = f.name;
+  infoSize.textContent = (f.size/1024).toFixed(1) + ' KB';
+  fileInfoBox.style.display = 'block';
+  document.getElementById('dropTitle').textContent = f.name;
+  if(f.name.match(/\.csv$/i)) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const lines = e.target.result.trim().split('\n');
+      const mat = lines.map(l => l.split(',').map(Number)).filter(r => r.some(v => !isNaN(v)));
+      if(mat.length && mat[0].length >= 12) {
+        ecgMatrix = mat;
+        infoSamplesRow.style.display = 'flex';
+        infoSamples.textContent = mat.length + ' mẫu x ' + mat[0].length + ' leads';
+      } else {
+        ecgMatrix = mat.map(r => [r[0]]);
+      }
+      drawECG(currentLead);
+    };
+    reader.readAsText(f);
+  }
+}
+
+// ===== ECG Canvas =====
+const ecgCanvas = document.getElementById('ecgWaveform');
+const ecgCtx    = ecgCanvas.getContext('2d');
+function resizeCanvas() {
+  const w = ecgCanvas.parentElement.clientWidth;
+  ecgCanvas.width  = w;
+  ecgCanvas.height = 200;
+}
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); if(!isAnim) drawECG(currentLead); });
+
+function drawSignal(data, offset) {
+  const W = ecgCanvas.width, H = ecgCanvas.height;
+  ecgCtx.clearRect(0,0,W,H);
+  ecgCtx.fillStyle = '#0a1628'; ecgCtx.fillRect(0,0,W,H);
+  // grid
+  ecgCtx.strokeStyle = 'rgba(34,197,94,.06)'; ecgCtx.lineWidth = 1;
+  for(let x=0;x<W;x+=20){ecgCtx.beginPath();ecgCtx.moveTo(x,0);ecgCtx.lineTo(x,H);ecgCtx.stroke();}
+  for(let y=0;y<H;y+=20){ecgCtx.beginPath();ecgCtx.moveTo(0,y);ecgCtx.lineTo(W,y);ecgCtx.stroke();}
+  if(!data||!data.length) return;
+  const pts = data.slice(offset, offset+W);
+  if(!pts.length) return;
+  const mn=Math.min(...pts), mx=Math.max(...pts), rng=mx-mn||1, pad=20;
+  ecgCtx.beginPath();
+  ecgCtx.strokeStyle='#22c55e'; ecgCtx.lineWidth=1.5;
+  ecgCtx.shadowColor='rgba(34,197,94,.6)'; ecgCtx.shadowBlur=4;
+  pts.forEach((v,i)=>{
+    const x=i*(W/pts.length), y=H-pad-((v-mn)/rng)*(H-2*pad);
+    i===0?ecgCtx.moveTo(x,y):ecgCtx.lineTo(x,y);
+  });
+  ecgCtx.stroke(); ecgCtx.shadowBlur=0;
+}
+
+function drawDemo() {
+  const W = ecgCanvas.width, H = ecgCanvas.height;
+  ecgCtx.clearRect(0,0,W,H);
+  ecgCtx.fillStyle='#0a1628'; ecgCtx.fillRect(0,0,W,H);
+  ecgCtx.strokeStyle='rgba(34,197,94,.06)'; ecgCtx.lineWidth=1;
+  for(let x=0;x<W;x+=20){ecgCtx.beginPath();ecgCtx.moveTo(x,0);ecgCtx.lineTo(x,H);ecgCtx.stroke();}
+  for(let y=0;y<H;y+=20){ecgCtx.beginPath();ecgCtx.moveTo(0,y);ecgCtx.lineTo(W,y);ecgCtx.stroke();}
+  ecgCtx.beginPath();
+  ecgCtx.strokeStyle='#22c55e'; ecgCtx.lineWidth=1.5;
+  ecgCtx.shadowColor='rgba(34,197,94,.6)'; ecgCtx.shadowBlur=4;
+  for(let i=0;i<W;i++){
+    const t=(i+demoT)/60, b=t%1;
+    let v=0;
+    if(b<.1) v=Math.sin(b*10*Math.PI)*.08;
+    else if(b<.15) v=-.08;
+    else if(b<.2) v=.9*Math.sin((b-.15)*20*Math.PI);
+    else if(b<.25) v=-.2*Math.sin((b-.2)*20*Math.PI);
+    else if(b<.45) v=.12*Math.sin((b-.25)*10*Math.PI);
+    const y=H/2 - v*(H*.4);
+    i===0?ecgCtx.moveTo(i,y):ecgCtx.lineTo(i,y);
+  }
+  ecgCtx.stroke(); ecgCtx.shadowBlur=0;
+}
+
+function drawECG(lead) {
+  if(!ecgMatrix){drawDemo();return;}
+  const data = ecgMatrix.map(r=>r[Math.min(lead,r.length-1)]);
+  drawSignal(data,0);
+}
+
+function startAnim() {
+  isAnim=true;
+  document.getElementById('animText').textContent='Dừng';
+  document.getElementById('animIcon').setAttribute('data-feather','pause');
+  feather.replace({'stroke-width':1.5,width:16,height:16});
+  function loop(){
+    demoT+=2; animOff+=2;
+    if(ecgMatrix) drawSignal(ecgMatrix.map(r=>r[currentLead]), animOff%(Math.max(ecgMatrix.length-ecgCanvas.width,1)));
+    else drawDemo();
+    animId=requestAnimationFrame(loop);
+  }
+  loop();
+}
+function stopAnim() {
+  isAnim=false;
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  document.getElementById('animText').textContent='Animation';
+  document.getElementById('animIcon').setAttribute('data-feather','play');
+  feather.replace({'stroke-width':1.5,width:16,height:16});
+  drawECG(currentLead);
+}
+
+document.getElementById('animateBtn').addEventListener('click', ()=>{ isAnim?stopAnim():startAnim(); });
+
+document.querySelectorAll('.lead-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.lead-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLead=parseInt(btn.dataset.lead);
+    if(!isAnim) drawECG(currentLead);
+  });
+});
+
+// start demo
+resizeCanvas(); startAnim();
+
+// ===== AI Preview =====
+previewBtn.addEventListener('click', async () => {
+  if (modeCsv.checked && !fileInput.files[0]) {
+    alert('Vui lòng chọn file CSV trước!');
+    return;
+  }
+  if (modeWfdb.checked) {
+    const heaFile = document.getElementById('heaInput').files[0];
+    const datFile = document.getElementById('datInput').files[0];
+    if (!heaFile || !datFile) {
+      alert('Vui lòng chọn đủ 2 file .hea và .dat trước khi xem trước ECG!');
+      return;
+    }
+  }
+  spinner.style.display='inline-block';
+  const fd = new FormData();
+  if (modeCsv.checked && fileInput.files[0]) {
+    fd.append('file', fileInput.files[0]);
+  }
+  if (modeWfdb.checked) {
+    const heaFile = document.getElementById('heaInput').files[0];
+    const datFile = document.getElementById('datInput').files[0];
+    fd.append('hea_file', heaFile);
+    fd.append('dat_file', datFile);
+  }
+  fd.append('threshold', threshRange.value);
+  try {
+    const res = await fetch('/api/predict-upload', {method:'POST', body:fd});
+    const data = await res.json();
+    spinner.style.display='none';
+    if(data.error){ alert('Lỗi: '+data.error); return; }
+    showResult(data);
+  } catch(e) {
+    spinner.style.display='none';
+    alert('Lỗi kết nối: '+e.message);
+  }
+});
+
+function showResult(data) {
+  placeholder.style.display='none';
+  resultContent.style.display='block';
+  const hr = data.heart_rate;
+  bpmEl.textContent = hr ? Math.round(hr) : '--';
+  document.getElementById('modelTypeLabel').textContent = data.model_type || '';
+  if(hr){
+    if(hr<60||hr>100){
+      heartEl.textContent = hr<60 ? 'Nhịp chậm' : 'Nhịp nhanh';
+      heartEl.className = 'status-pill status-warning';
+    } else {
+      heartEl.textContent = 'Bình thường';
+      heartEl.className = 'status-pill status-normal';
+    }
+  }
+  const preds = data.multi_label_predictions||[];
+  if(preds.length){
+    predList.innerHTML = preds.slice(0,6).map(p=>`
+      <div class="result-item">
+        <div>
+          <div class="result-name">${p.disease_vn||p.disease}</div>
+          <div class="result-sub">${p.disease}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:16px;font-weight:700;color:${p.confidence>.7?'var(--danger)':p.confidence>.5?'var(--warning)':'var(--primary)'};">
+            ${(p.confidence*100).toFixed(1)}%
+          </div>
+          <div class="result-sub">Xác suất dự đoán</div>
+        </div>
+      </div>`).join('');
+    const ctx = document.getElementById('probChart').getContext('2d');
+    if(probChart) probChart.destroy();
+    probChart = new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:preds.slice(0,8).map(p=>p.disease),
+        datasets:[{
+          label:'Xác suất (%)',
+          data:preds.slice(0,8).map(p=>+(p.confidence*100).toFixed(1)),
+          backgroundColor:preds.slice(0,8).map(p=>p.confidence>.7?'rgba(239,68,68,.7)':p.confidence>.5?'rgba(245,158,11,.7)':'rgba(34,197,94,.7)'),
+          borderRadius:4, borderSkipped:false
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8',font:{size:11}}},
+          y:{max:100,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8',callback:v=>v+'%'}}
+        }
+      }
+    });
+  } else {
+    predList.innerHTML = '<div style="color:var(--primary);padding:16px 0;font-size:15px;">&#10003; Không phát hiện bệnh lý bất thường</div>';
+  }
+  feather.replace({'stroke-width':1.5,width:16,height:16});
+}
+</script>
+{% endblock %}

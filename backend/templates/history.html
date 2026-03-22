@@ -1,184 +1,205 @@
 {% extends "base.html" %}
+{% block title %}Lịch sử phân tích - ECG AI{% endblock %}
+
 {% block content %}
-<h1>LỊCH SỬ PHÂN TÍCH ECG</h1>
-<div class="card shadow-lg mb-4">
-  <div class="card-header">
-      <h2 class="mb-0" style="color: var(--color-primary);"><i data-feather="search" class="me-2"></i> Lịch sử phân tích ECG</h2>
-  </div>
-  <div class="card-body p-4">
-<form method="get" class="row g-3">
-      <div class="col-md-4">
-        <div class="input-group">
-          <span class="input-group-text"><i data-feather="search"></i></span>
-          <input class="form-control" type="text" name="q" placeholder="Tìm tên, ID hoặc ngày" value="{{ request.args.get('q','') }}" list="suggestions">
-        </div>
-        <datalist id="suggestions"></datalist>
-      </div>
-      <div class="col-md-2">
-        <input class="form-control" type="date" name="start_date" value="{{ request.args.get('start_date','') }}" placeholder="Từ ngày">
-      </div>
-      <div class="col-md-2">
-        <input class="form-control" type="date" name="end_date" value="{{ request.args.get('end_date','') }}" placeholder="Đến ngày">
-      </div>
-      <div class="col-auto">
-        <button class="btn btn-primary" type="submit"><i data-feather="search"></i> TÌM KIẾM </button>
-      </div>
-      <!-- period filter styled as neon pill buttons -->
-      <div class="col d-flex align-items-center ms-5">
-          <div class="pill-group btn-group" role="group">
-              <label class="btn btn-sm {% if period=='7' %}active{% endif %}">
-                  <input type="radio" name="period" id="p7" value="7" autocomplete="off" {% if period=='7' %}checked{% endif %} onchange="this.form.submit()">7 NGÀY
-              </label>
-              <label class="btn btn-sm {% if period=='30' %}active{% endif %}">
-                  <input type="radio" name="period" id="p30" value="30" autocomplete="off" {% if period=='30' %}checked{% endif %} onchange="this.form.submit()">30 NGÀY
-              </label>
-              <label class="btn btn-sm {% if period=='12m' %}active{% endif %}">
-                  <input type="radio" name="period" id="p12m" value="12m" autocomplete="off" {% if period=='12m' %}checked{% endif %} onchange="this.form.submit()">12 THÁNG
-              </label>
-          </div>
-      </div>
-</form>
-  </div>
+<div class="page-header">
+  <h1>Lịch sử phân tích ECG</h1>
+  <p class="page-subtitle">Xem lại các kết quả chẩn đoán đã thực hiện</p>
 </div>
-<div class="card p-3 mb-4 history-chart-card">
-  {% if chart_values and chart_values|length > 0 %}
-    <div class="history-chart-wrapper{% if period!='7' %} fullwidth{% endif %}">
-      <canvas id="historyChart"></canvas>
-    </div>
-  {% else %}
-    <div class="history-placeholder d-flex align-items-center justify-content-center" style="height:100%;">
-      <div class="text-center text-muted">
-        <p class="mb-0">Không có dữ liệu biểu đồ.</p>
-        <small>Thử thay đổi bộ lọc hoặc chọn ngày khác.</small>
+
+<!-- Filter -->
+<div class="card" style="margin-bottom:20px;">
+  <form method="get" action="/history" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+    <div style="flex:0 1 580px;min-width:260px;">
+      <label class="form-label">Tìm kiếm</label>
+      <div class="search-bar">
+        <i data-feather="search" style="color:var(--text-muted);flex-shrink:0;width:16px;height:16px;"></i>
+        <input type="text" name="q" placeholder="Tên BN, Mã BN, SĐT, File, ID..." value="{{ q if q is defined else '' }}">
       </div>
     </div>
+    <div style="width:220px;">
+      <label class="form-label">Từ ngày</label>
+      <input type="date" name="start_date" class="form-control" value="{{ request.args.get('start_date','') }}" style="width:220px;">
+    </div>
+    <div style="width:220px;">
+      <label class="form-label">Đến ngày</label>
+      <input type="date" name="end_date" class="form-control" value="{{ request.args.get('end_date','') }}" style="width:220px;">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+      <button type="submit" class="btn btn-primary">
+        <i data-feather="search"></i> Tìm kiếm
+      </button>
+      {% for val, label in [('7','7 ngày'),('30','30 ngày'),('12m','12 tháng')] %}
+      <button type="submit" name="period" value="{{ val }}"
+              class="btn {% if period == val %}btn-primary{% else %}btn-outline{% endif %}">
+        {{ label }}
+      </button>
+      {% endfor %}
+    </div>
+  </form>
+</div>
+
+<!-- Chart -->
+{% if chart_values and chart_values|length > 0 %}
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header-row">
+    <span class="card-title">Biểu đồ phân tích theo thời gian</span>
+  </div>
+  <div class="chart-wrapper"><canvas id="historyChart"></canvas></div>
+</div>
+{% endif %}
+
+<!-- Table -->
+<div class="card">
+  <div class="card-header-row">
+    <span class="card-title">Danh sách bản ghi ({{ ecgs|length }} kết quả)</span>
+    <button class="btn btn-outline" onclick="printSelected()">
+      <i data-feather="printer"></i> In
+    </button>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Chọn</th>
+          <th>ID phân tích</th>
+          <th>Bệnh nhân</th>
+          <th>Tuổi</th>
+          <th>Giới tính</th>
+          <th>Tên file</th>
+          <th>Thời gian</th>
+          <th>Kết quả bệnh</th>
+          <th>Nhịp tim</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ecg in ecgs %}
+        {% set full_id = ecg['_id']|string %}
+        {% set short_id = 'ECG-' ~ full_id[-6:] %}
+        <tr>
+          <td>
+            <input type="radio" name="sel_ecg" value="{{ full_id }}"
+                   style="accent-color:var(--primary);">
+          </td>
+          <td style="font-size:14px;color:var(--text-muted);max-width:120px;overflow:hidden;
+                     text-overflow:ellipsis;white-space:nowrap;" title="{{ full_id }}">
+            <strong style="color:var(--info);">{{ short_id }}</strong>
+          </td>
+          <td style="color:var(--text);font-weight:500;">{{ ecg.get('patient_name','--') }}</td>
+          <td>
+            {% if ecg.get('age') is not none %}
+            <span style="color:var(--text);">{{ ecg.get('age') }}</span>
+            {% else %}
+            <span style="color:var(--text-muted);">--</span>
+            {% endif %}
+          </td>
+          <td>
+            <span style="color:var(--text);">{{ ecg.get('gender','--') }}</span>
+          </td>
+          <td style="color:var(--text);font-weight:500;">
+            {{ ecg.get('name','--')|truncate(30,True,'...') }}
+          </td>
+          <td>
+            <span style="font-size:14px;color:var(--text-muted);">
+              {{ ecg['timestamp']|datetimeformat }}
+            </span>
+          </td>
+          <td>
+            {% if ecg.get('multi_label_predictions') %}
+              {% for p in ecg['multi_label_predictions'][:3] %}
+              <span class="badge badge-green" style="margin:2px 2px 2px 0;">{{ p.disease }}</span>
+              {% endfor %}
+              {% if ecg['multi_label_predictions']|length > 3 %}
+              <span style="font-size:13px;color:var(--text-muted);">+{{ ecg['multi_label_predictions']|length-3 }}</span>
+              {% endif %}
+            {% elif ecg.get('prediction_label') %}
+              <span class="badge badge-yellow">{{ ecg['prediction_label'] }}</span>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:14px;">--</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if ecg.get('heart_rate') %}
+            <span style="color:var(--primary);font-weight:600;">{{ ecg['heart_rate']|round(0)|int }} BPM</span>
+            {% else %}
+            <span style="color:var(--text-muted);">--</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if ecg.get('view_id') %}
+              <a href="/ecg/{{ ecg.get('view_id')|string }}" class="btn btn-sm btn-outline">
+                <i data-feather="eye"></i> Xem
+              </a>
+              <a href="/delete/{{ ecg.get('view_id')|string }}" class="btn btn-sm btn-danger"
+                 onclick="return confirm('Xóa bản ghi này?');">
+                <i data-feather="trash-2"></i>
+              </a>
+            {% else %}
+              <button class="btn btn-sm btn-outline" disabled>
+                <i data-feather="eye"></i> Xem
+              </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="10" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <i data-feather="inbox" style="width:32px;height:32px;display:block;margin:0 auto 8px;"></i>
+            Không có dữ liệu phân tích nào.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if total_pages is defined and total_pages > 1 %}
+  <div style="display:flex;justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap;">
+    {% for p in range(1, total_pages+1) %}
+    <a href="?q={{ q if q is defined else '' }}&period={{ period if period is defined else '' }}&page={{ p }}"
+       class="btn btn-sm {% if page == p %}btn-primary{% else %}btn-outline{% endif %}">{{ p }}</a>
+    {% endfor %}
+  </div>
   {% endif %}
 </div>
 
+<div id="hChartData" data-labels='{{ chart_labels|tojson }}' data-values='{{ chart_values|tojson }}' style="display:none;"></div>
+{% endblock %}
 
-<div class="card p-3 mb-4">
-  <div class="table-responsive history-table">
-  <table class="table table-hover text-center">
-  <thead><tr><th class="text-uppercase">Chọn</th><th class="text-uppercase">ID</th><th class="text-uppercase">Tên</th><th class="text-uppercase">Ngày</th><th class="text-uppercase">Thao tác</th></tr></thead>
-<tbody>
-{% for ecg in ecgs %}
-<tr>
- <td class="align-middle"><input type="radio" name="selected_ecg" value="{{ ecg['_id']|string }}"></td>
- <td>{{ ecg['_id']|string }}</td>
- <td>{{ ecg['name'] }}</td>
- <td><span class="time-badge">{{ ecg['timestamp']|datetimeformat }}</span></td>
- <td>
-   <a class="btn btn-sm btn-outline-primary" href="/ecg/{{ ecg['_id']|string }}">CHI TIẾT</a>
-   <a class="btn btn-sm btn-outline-danger" href="/delete/{{ ecg['_id']|string }}" onclick="return confirm('Xóa bản ghi này?');">XÓA</a>
- </td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-  <div class="d-flex w-100 justify-content-end mt-2">
-    <button class="btn btn-outline-primary me-4" type="button" id="printBtn" onclick="printSelected()"><i data-feather="printer"></i> IN </button>
-    <a class="btn btn-outline-success" href="/history/export?q={{ q }}&period={{ period }}&start_date={{ request.args.get('start_date','') }}&end_date={{ request.args.get('end_date','') }}"><i data-feather="file-text"></i> XUẤT CSV</a>
-  </div>
-<!-- hidden container for history chart data -->
-<div id="historyData" data-labels='{{ chart_labels|tojson }}' data-values='{{ chart_values|tojson }}' style="display:none;"></div>
+{% block scripts %}
 <script>
-// build a simple bar chart of counts per day, reuse labels/values from dashboard for demo
-const histCanvas = document.getElementById('historyChart');
-if(histCanvas){
-  const histCtx = histCanvas.getContext('2d');
-  const dataContainer = document.getElementById('historyData');
-  const labels = JSON.parse(dataContainer.dataset.labels);
-  const values = JSON.parse(dataContainer.dataset.values);
-  // set a minimum width proportional to number of data points when period isn't 7
-  if(labels.length > 7){
-    // 40px per bar as a starting point
-    histCanvas.style.minWidth = (labels.length * 40) + 'px';
-  }
-  // helper for hex-to-rgba
-  function hex2rgba(hex, a){
-      hex = hex.trim().replace('#','');
-      if(hex.length===3) hex = hex.split('').map(h=>h+h).join('');
-      const r=parseInt(hex.substr(0,2),16);
-      const g=parseInt(hex.substr(2,2),16);
-      const b=parseInt(hex.substr(4,2),16);
-      return `rgba(${r},${g},${b},${a})`;
-  }
-  // gradient for bars using accent
-  const accent = getComputedStyle(document.body).getPropertyValue('--color-primary');
-  const histGradient = histCtx.createLinearGradient(0,0,0,400);
-  histGradient.addColorStop(0, hex2rgba(accent,0.6));
-  histGradient.addColorStop(1, hex2rgba(accent,0.2));
-  new Chart(histCtx,{
+feather.replace({'stroke-width':1.5,width:16,height:16});
+const hcd = document.getElementById('hChartData');
+const hc  = document.getElementById('historyChart');
+if(hc && hcd){
+  const labels = JSON.parse(hcd.dataset.labels||'[]');
+  const values = JSON.parse(hcd.dataset.values||'[]');
+  const ctx = hc.getContext('2d');
+  const g = ctx.createLinearGradient(0,0,0,280);
+  g.addColorStop(0,'rgba(34,197,94,.35)'); g.addColorStop(1,'rgba(34,197,94,.02)');
+  new Chart(ctx,{
     type:'bar',
-    data:{labels:labels,datasets:[{label:'LƯỢT TẢI',data:values,backgroundColor:histGradient,borderColor:getComputedStyle(document.body).getPropertyValue('--color-primary'),borderWidth:1}]},
+    data:{ labels, datasets:[{
+      label:'Số ca phân tích', data:values,
+      backgroundColor:'rgba(34,197,94,.6)', borderColor:'#22c55e',
+      borderWidth:1, borderRadius:4
+    }]},
     options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{labels:{color: getComputedStyle(document.body).getPropertyValue('--color-text')} },
-        tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleFont:{size:12},bodyFont:{size:11},cornerRadius:4},
-        zoom:{pan:{enabled:true,mode:'x'},zoom:{wheel:{enabled:true},mode:'x'}}
-      },
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#94a3b8' } } },
       scales:{
-        x:{grid:{color: 'rgba(255,255,255,0.05)'},ticks:{color: getComputedStyle(document.body).getPropertyValue('--color-text')}},
-        y:{grid:{color: 'rgba(255,255,255,0.05)'},ticks:{color: getComputedStyle(document.body).getPropertyValue('--color-text')}}
+        x:{ grid:{ color:'rgba(255,255,255,.04)' }, ticks:{ color:'#94a3b8' } },
+        y:{ beginAtZero:true, grid:{ color:'rgba(255,255,255,.04)' }, ticks:{ color:'#94a3b8' } }
       }
     }
   });
 }
-</script>
-<script>
-// clear period radios if user enters custom date range
-(function(){
-  const start = document.querySelector('input[name="start_date"]');
-  const end = document.querySelector('input[name="end_date"]');
-  if(start && end){
-    [start,end].forEach(el=>{
-      el.addEventListener('change', function(){
-        if(start.value || end.value){
-          document.querySelectorAll('input[name="period"]').forEach(r=>r.checked=false);
-        }
-      });
-    });
-  }
-})();
-</script>
-<script>
-// autocomplete for history search using datalist, with debounce
-(function(){
-  const inp = document.querySelector('input[name="q"]');
-  const list = document.getElementById('suggestions');
-  if(!inp || !list) return;
-  let timer = null;
-  inp.addEventListener('input', function(){
-    clearTimeout(timer);
-    const v = this.value.trim();
-    if(!v){ list.innerHTML = ''; return; }
-    timer = setTimeout(()=>{
-      fetch('/history/suggest?q='+encodeURIComponent(v))
-        .then(r=>r.json())
-        .then(arr=>{
-          list.innerHTML = '';
-          arr.forEach(s=>{
-            const opt = document.createElement('option');
-            opt.value = s;
-            list.appendChild(opt);
-          });
-        }).catch(()=>{});
-    }, 250);
-  });
-})();
-</script>
-<script>
-function printSelected(){
-  const sel = document.querySelector('input[name="selected_ecg"]:checked');
-  if(!sel){
-    alert('Vui lòng chọn một bản ghi để in biểu đồ.');
-    return;
-  }
-  const id = sel.value;
-  // open print-friendly view in a new window/tab
-  window.open('/ecg/'+encodeURIComponent(id)+'/print','_blank');
+function printSelected() {
+  const sel = document.querySelector('input[name=sel_ecg]:checked');
+  if(!sel){ alert('Vui lòng chọn bản ghi cần in!'); return; }
+  window.open('/print-ecg/'+sel.value,'_blank');
 }
 </script>
 {% endblock %}
