@@ -7,6 +7,12 @@
   <p class="page-subtitle">Theo dõi hoạt động phân tích ECG theo thời gian thực</p>
 </div>
 
+{% if db_warning %}
+<div class="alert alert-warning">
+  Du lieu thong ke tam thoi khong kha dung tren server. Ban van co the dung trang Phan tich ECG de chay AI.
+</div>
+{% endif %}
+
 <!-- Stat Cards -->
 <div class="stat-grid">
   <div class="stat-card">

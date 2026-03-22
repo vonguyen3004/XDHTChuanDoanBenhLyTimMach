@@ -11,6 +11,7 @@ import joblib
 import certifi
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+from pymongo.errors import PyMongoError
 from bson.objectid import ObjectId
 import pandas as pd
 from pathlib import Path
@@ -811,11 +812,10 @@ def dashboard():
         ema_alpha = 0.30
     ema_alpha = min(max(ema_alpha, 0.05), 0.95)
 
-    count = ecgs_collection.count_documents({})
-    # compute average heart rate if available
-    hr_docs = ecgs_collection.find({'heart_rate': {'$exists': True}}, {'heart_rate': 1})
-    hr_list = [d['heart_rate'] for d in hr_docs if d.get('heart_rate') is not None]
-    avg_hr = sum(hr_list)/len(hr_list) if hr_list else 0
+    db_warning = None
+    count = 0
+    avg_hr = 0
+
     # compute uploads per day for last 7 days
     today = datetime.datetime.utcnow().date()
     labels = []
@@ -824,29 +824,15 @@ def dashboard():
         day = today - datetime.timedelta(days=i)
         start = datetime.datetime(day.year, day.month, day.day)
         end = start + datetime.timedelta(days=1)
-        num = ecgs_collection.count_documents({'timestamp': {'$gte': start, '$lt': end}})
+        num = 0
         labels.append(day.strftime('%d/%m'))
         values.append(num)
     ai_status = 'Online' if (cnn_model is not None or model is not None) else 'Offline'
 
     today_start = datetime.datetime(today.year, today.month, today.day)
     today_end = today_start + datetime.timedelta(days=1)
-    today_uploads = ecgs_collection.count_documents({'timestamp': {'$gte': today_start, '$lt': today_end}})
-
-    recent_docs = ecgs_collection.find(
-        {'multi_label_predictions': {'$exists': True}},
-        {'multi_label_predictions': 1}
-    ).sort('timestamp', -1).limit(300)
-    disease_counter = Counter()
-    for doc in recent_docs:
-        for item in doc.get('multi_label_predictions', []):
-            disease = item.get('disease')
-            if disease:
-                disease_counter[disease] += 1
-    top_diseases = [
-        {'disease': d, 'count': c, 'vn': DISEASE_VN.get(d, d)}
-        for d, c in disease_counter.most_common(5)
-    ]
+    today_uploads = 0
+    top_diseases = []
 
     # Confidence drift by day for top diseases.
     drift_start_day = today - datetime.timedelta(days=drift_days - 1)
@@ -854,48 +840,80 @@ def dashboard():
         (drift_start_day + datetime.timedelta(days=i)).strftime('%d/%m')
         for i in range(drift_days)
     ]
-
-    drift_candidates = ecgs_collection.find(
-        {
-            'timestamp': {
-                '$gte': datetime.datetime(drift_start_day.year, drift_start_day.month, drift_start_day.day),
-                '$lt': datetime.datetime(today.year, today.month, today.day) + datetime.timedelta(days=1),
-            },
-            'multi_label_predictions': {'$exists': True},
-        },
-        {'timestamp': 1, 'multi_label_predictions': 1}
-    )
-
+    drift_series = []
     drift_counter = Counter()
     daily_conf = {}
     for i in range(drift_days):
         day = drift_start_day + datetime.timedelta(days=i)
         daily_conf[day.strftime('%Y-%m-%d')] = {}
 
-    for doc in drift_candidates:
-        ts = doc.get('timestamp')
-        if not isinstance(ts, datetime.datetime):
-            continue
-        day_key = ts.date().strftime('%Y-%m-%d')
-        if day_key not in daily_conf:
-            continue
+    try:
+        count = ecgs_collection.count_documents({})
+        hr_docs = ecgs_collection.find({'heart_rate': {'$exists': True}}, {'heart_rate': 1})
+        hr_list = [d['heart_rate'] for d in hr_docs if d.get('heart_rate') is not None]
+        avg_hr = sum(hr_list)/len(hr_list) if hr_list else 0
 
-        for item in doc.get('multi_label_predictions', []):
-            disease = item.get('disease')
-            conf = item.get('confidence')
-            if not disease or conf is None:
+        values = []
+        for i in range(6, -1, -1):
+            day = today - datetime.timedelta(days=i)
+            start = datetime.datetime(day.year, day.month, day.day)
+            end = start + datetime.timedelta(days=1)
+            num = ecgs_collection.count_documents({'timestamp': {'$gte': start, '$lt': end}})
+            values.append(num)
+
+        today_uploads = ecgs_collection.count_documents({'timestamp': {'$gte': today_start, '$lt': today_end}})
+
+        recent_docs = ecgs_collection.find(
+            {'multi_label_predictions': {'$exists': True}},
+            {'multi_label_predictions': 1}
+        ).sort('timestamp', -1).limit(300)
+        disease_counter = Counter()
+        for doc in recent_docs:
+            for item in doc.get('multi_label_predictions', []):
+                disease = item.get('disease')
+                if disease:
+                    disease_counter[disease] += 1
+        top_diseases = [
+            {'disease': d, 'count': c, 'vn': DISEASE_VN.get(d, d)}
+            for d, c in disease_counter.most_common(5)
+        ]
+
+        drift_candidates = ecgs_collection.find(
+            {
+                'timestamp': {
+                    '$gte': datetime.datetime(drift_start_day.year, drift_start_day.month, drift_start_day.day),
+                    '$lt': datetime.datetime(today.year, today.month, today.day) + datetime.timedelta(days=1),
+                },
+                'multi_label_predictions': {'$exists': True},
+            },
+            {'timestamp': 1, 'multi_label_predictions': 1}
+        )
+
+        for doc in drift_candidates:
+            ts = doc.get('timestamp')
+            if not isinstance(ts, datetime.datetime):
                 continue
-            try:
-                conf_val = float(conf)
-            except Exception:
+            day_key = ts.date().strftime('%Y-%m-%d')
+            if day_key not in daily_conf:
                 continue
 
-            drift_counter[disease] += 1
-            bucket = daily_conf[day_key].setdefault(disease, [])
-            bucket.append(conf_val * 100.0)
+            for item in doc.get('multi_label_predictions', []):
+                disease = item.get('disease')
+                conf = item.get('confidence')
+                if not disease or conf is None:
+                    continue
+                try:
+                    conf_val = float(conf)
+                except Exception:
+                    continue
+
+                drift_counter[disease] += 1
+                bucket = daily_conf[day_key].setdefault(disease, [])
+                bucket.append(conf_val * 100.0)
+    except PyMongoError as e:
+        db_warning = f'Khong the ket noi MongoDB: {e.__class__.__name__}'
 
     drift_top_diseases = [d for d, _ in drift_counter.most_common(drift_top_n)]
-    drift_series = []
 
     def compute_ema(values, alpha):
         out = []
@@ -952,6 +970,7 @@ def dashboard():
         drift_smooth_param='1' if drift_smooth else '0',
         ema_alpha=ema_alpha,
         ema_alpha_param=f"{ema_alpha:.2f}",
+        db_warning=db_warning,
     )
 
 
